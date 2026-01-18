@@ -1,42 +1,81 @@
 /**
  * Posts composable
- * Manages matched posts display and status
+ * Manages matched posts display and status with live updates
  */
 
-import { ref, shallowRef, computed, onMounted, triggerRef } from 'vue';
-import type { MatchedPostWithScore, CachedRssFeed } from '@shared/types';
-import { MAX_MATCHED_POSTS } from '@shared/constants';
+import { ref, shallowRef, computed, onMounted, onUnmounted, triggerRef } from 'vue';
+import type { MatchedPostWithScore, CachedRssFeed, ExtractedPostRecord } from '@shared/types';
+import { MAX_MATCHED_POSTS, STORAGE_KEYS } from '@shared/constants';
 import {
   getMatchedPostsWithScore,
   saveMatchedPostsWithScore,
   getCachedRssFeed,
   isCachedFeedValid,
   getExtractedPosts,
+  getEvaluatedPostIds,
+  getConfig,
 } from '@shared/storage';
 import { sendMessage } from '@shared/messages';
 
-export type PostFilter = 'all' | 'pending' | 'replied' | 'skipped';
+export type PostFilter = 'queued' | 'matched' | 'unmatched' | 'replied' | 'skipped';
 
 export function usePosts() {
   // State - use shallowRef for large arrays to improve performance
   const matchedPosts = shallowRef<MatchedPostWithScore[]>([]);
+  const extractedPosts = shallowRef<ExtractedPostRecord[]>([]);
+  const evaluatedPostIds = shallowRef<Set<string>>(new Set());
   const cachedFeed = shallowRef<CachedRssFeed | null>(null);
-  const extractedPostCount = ref(0);
   const isLoading = ref(false);
   const isRefreshing = ref(false);
   const error = ref<string | null>(null);
-  const currentFilter = ref<PostFilter>('all');
+  const currentFilter = ref<PostFilter>('queued');
   const lastRefreshedAt = ref<number | null>(null);
 
-  // Computed values
-  const filteredPosts = computed(() => {
-    if (currentFilter.value === 'all') {
-      return matchedPosts.value;
-    }
-    return matchedPosts.value.filter((p) => p.status === currentFilter.value);
+  // Storage change listener reference for cleanup
+  let storageListener: ((changes: { [key: string]: chrome.storage.StorageChange }) => void) | null = null;
+
+  // Helper to get the key for a post
+  const getPostKey = (platform: string, id: string) => `${platform}:${id}`;
+
+  // Posts in queue (extracted but not yet evaluated by AI)
+  const queuedPosts = computed(() => {
+    return extractedPosts.value.filter((p) => {
+      const key = getPostKey(p.platform, p.id);
+      return !evaluatedPostIds.value.has(key);
+    });
   });
 
-  const pendingCount = computed(() => matchedPosts.value.filter((p) => p.status === 'pending').length);
+  // Posts that were evaluated but didn't match (not in matchedPosts)
+  const unmatchedPosts = computed(() => {
+    const matchedKeys = new Set(matchedPosts.value.map((m) => getPostKey(m.post.platform, m.post.id)));
+    return extractedPosts.value.filter((p) => {
+      const key = getPostKey(p.platform, p.id);
+      return evaluatedPostIds.value.has(key) && !matchedKeys.has(key);
+    });
+  });
+
+  // Computed values
+  const filteredMatchedPosts = computed(() => {
+    switch (currentFilter.value) {
+      case 'matched':
+        return matchedPosts.value.filter((p) => p.status === 'pending');
+      case 'replied':
+        return matchedPosts.value.filter((p) => p.status === 'replied');
+      case 'skipped':
+        return matchedPosts.value.filter((p) => p.status === 'skipped');
+      default:
+        return [];
+    }
+  });
+
+  // Count of posts in queue (extracted but not yet analyzed)
+  const queuedCount = computed(() => queuedPosts.value.length);
+
+  // Count of matched posts (analyzed and pending action)
+  const matchedCount = computed(() => matchedPosts.value.filter((p) => p.status === 'pending').length);
+
+  // Count of unmatched posts (evaluated but didn't meet threshold)
+  const unmatchedCount = computed(() => unmatchedPosts.value.length);
 
   const repliedCount = computed(() => matchedPosts.value.filter((p) => p.status === 'replied').length);
 
@@ -81,13 +120,86 @@ export function usePosts() {
       cachedFeed.value = await getCachedRssFeed();
       triggerRef(cachedFeed);
 
-      // Get extracted post count
+      // Auto-refresh RSS feed if cache is missing/expired but URL is configured
+      const config = await getConfig();
+      if (config.rssFeedUrl && (!cachedFeed.value || !isCachedFeedValid(cachedFeed.value))) {
+        // Refresh in background without blocking
+        sendMessage({ type: 'FETCH_RSS', url: '' })
+          .then(async (response) => {
+            if (response.success) {
+              // Reload the cached feed after refresh
+              cachedFeed.value = await getCachedRssFeed();
+              triggerRef(cachedFeed);
+            }
+          })
+          .catch(() => {
+            // Silently ignore refresh errors on startup
+          });
+      }
+
+      // Load extracted posts for the queue
       const extracted = await getExtractedPosts();
-      extractedPostCount.value = extracted.length;
+      extractedPosts.value = extracted;
+      triggerRef(extractedPosts);
+
+      // Load evaluated post IDs
+      evaluatedPostIds.value = await getEvaluatedPostIds();
+      triggerRef(evaluatedPostIds);
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load posts';
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /**
+   * Set up storage change listener for live updates
+   */
+  function setupStorageListener() {
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+      return;
+    }
+
+    storageListener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+      // Update extracted posts when they change (live queue updates)
+      if (changes[STORAGE_KEYS.EXTRACTED_POSTS]) {
+        const newValue = changes[STORAGE_KEYS.EXTRACTED_POSTS].newValue as ExtractedPostRecord[] | undefined;
+        extractedPosts.value = newValue ?? [];
+        triggerRef(extractedPosts);
+      }
+
+      // Update matched posts when they change
+      if (changes[STORAGE_KEYS.MATCHED_POSTS_WITH_SCORE]) {
+        const newValue = changes[STORAGE_KEYS.MATCHED_POSTS_WITH_SCORE].newValue as MatchedPostWithScore[] | undefined;
+        matchedPosts.value = (newValue ?? []).slice(0, MAX_MATCHED_POSTS);
+        triggerRef(matchedPosts);
+      }
+
+      // Update evaluated post IDs when they change
+      if (changes[STORAGE_KEYS.EVALUATED_POST_IDS]) {
+        const newValue = changes[STORAGE_KEYS.EVALUATED_POST_IDS].newValue as string[] | undefined;
+        evaluatedPostIds.value = new Set(newValue ?? []);
+        triggerRef(evaluatedPostIds);
+      }
+
+      // Update cached feed when it changes
+      if (changes[STORAGE_KEYS.CACHED_RSS_FEED]) {
+        const newValue = changes[STORAGE_KEYS.CACHED_RSS_FEED].newValue as CachedRssFeed | undefined;
+        cachedFeed.value = newValue ?? null;
+        triggerRef(cachedFeed);
+      }
+    };
+
+    chrome.storage.local.onChanged.addListener(storageListener);
+  }
+
+  /**
+   * Clean up storage listener
+   */
+  function cleanupStorageListener() {
+    if (storageListener && typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.onChanged.removeListener(storageListener);
+      storageListener = null;
     }
   }
 
@@ -217,16 +329,23 @@ export function usePosts() {
     return 'Just now';
   }
 
-  // Load posts on mount
+  // Load posts and set up storage listener on mount
   onMounted(() => {
     loadPosts();
+    setupStorageListener();
+  });
+
+  // Clean up storage listener on unmount
+  onUnmounted(() => {
+    cleanupStorageListener();
   });
 
   return {
     // State
     matchedPosts,
+    extractedPosts,
+    evaluatedPostIds,
     cachedFeed,
-    extractedPostCount,
     isLoading,
     isRefreshing,
     error,
@@ -234,8 +353,12 @@ export function usePosts() {
     lastRefreshedAt,
 
     // Computed
-    filteredPosts,
-    pendingCount,
+    filteredMatchedPosts,
+    queuedPosts,
+    unmatchedPosts,
+    queuedCount,
+    matchedCount,
+    unmatchedCount,
     repliedCount,
     skippedCount,
     totalMatches,

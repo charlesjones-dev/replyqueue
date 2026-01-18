@@ -14,6 +14,8 @@ const {
   cacheTtlMinutes,
   exampleComments,
   communicationPreferences,
+  blogContentCharLimit,
+  postContentCharLimit,
 
   // UI state
   isLoading,
@@ -36,11 +38,13 @@ const {
 
   // Computed
   canSave,
-  // maskedApiKey - can be used for display if needed
+  rssFeedStatus,
 
   // Constants
   cacheTtlOptions,
   maxPostsOptions,
+  blogContentCharLimitOptions,
+  postContentCharLimitOptions,
 
   // Actions
   testApiKey,
@@ -151,7 +155,22 @@ const {
 
           <!-- RSS Feed Section -->
           <section class="rounded-lg bg-white p-4 shadow">
-            <h2 class="mb-3 text-sm font-medium text-gray-900">RSS Feed</h2>
+            <div class="mb-3 flex items-center justify-between">
+              <h2 class="text-sm font-medium text-gray-900">RSS Feed</h2>
+              <div class="flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                  <span
+                    class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                    :class="rssFeedStatus.connected ? 'bg-green-400' : 'bg-yellow-400'"
+                  />
+                  <span
+                    class="relative inline-flex h-2 w-2 rounded-full"
+                    :class="rssFeedStatus.connected ? 'bg-green-400' : 'bg-yellow-400'"
+                  />
+                </span>
+                <span class="text-xs text-gray-500">{{ rssFeedStatus.message }}</span>
+              </div>
+            </div>
             <div class="space-y-3">
               <div>
                 <label class="mb-1 block text-xs text-gray-500"> Feed URL </label>
@@ -252,6 +271,42 @@ const {
                   <option v-for="option in cacheTtlOptions" :key="option" :value="option">{{ option }} minutes</option>
                 </select>
                 <p class="mt-1 text-xs text-gray-500">How long to cache the RSS feed before refreshing.</p>
+              </div>
+
+              <!-- Blog Content Char Limit dropdown -->
+              <div>
+                <label class="mb-1 block text-xs text-gray-500"> Blog Content Sent to AI </label>
+                <select
+                  v-model.number="blogContentCharLimit"
+                  class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option v-for="option in blogContentCharLimitOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500">Amount of blog content included when matching posts.</p>
+                <p class="mt-1 text-xs text-amber-600">
+                  Higher limits provide better context but use more tokens and cost more.
+                </p>
+              </div>
+
+              <!-- Post Content Char Limit dropdown -->
+              <div>
+                <label class="mb-1 block text-xs text-gray-500"> Social Post Content Sent to AI </label>
+                <select
+                  v-model.number="postContentCharLimit"
+                  class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option v-for="option in postContentCharLimitOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500">
+                  Amount of social media post content included when evaluating relevance.
+                </p>
+                <p class="mt-1 text-xs text-amber-600">
+                  Higher limits capture more context but use more tokens and cost more.
+                </p>
               </div>
             </div>
           </section>

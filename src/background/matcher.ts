@@ -17,8 +17,11 @@ import type {
 } from '../shared/types';
 import {
   DEFAULT_MATCHING_PREFERENCES,
+  DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
+  DEFAULT_POST_CONTENT_CHAR_LIMIT,
   MAX_STYLE_EXAMPLES_IN_PROMPT,
   REPLY_SUGGESTIONS_COUNT,
+  AI_MATCH_BATCH_SIZE,
 } from '../shared/constants';
 import { chatCompletion } from './openrouter';
 
@@ -408,16 +411,27 @@ function cacheAIMatch(postId: string, platform: string, result: AIMatchResult): 
 
 /**
  * Build blog content summary from RSS feed items
+ * @param feedItems - The RSS feed items to summarize
+ * @param maxItems - Maximum number of items to include (default 10)
+ * @param charLimit - Character limit per item content (0 = no limit, default from settings)
  */
-function buildBlogSummary(feedItems: RssFeedItem[], maxItems: number = 5): string {
+function buildBlogSummary(
+  feedItems: RssFeedItem[],
+  maxItems: number = 10,
+  charLimit: number = DEFAULT_BLOG_CONTENT_CHAR_LIMIT
+): string {
   const items = feedItems.slice(0, maxItems);
 
   return items
     .map((item, index) => {
       const title = item.title || 'Untitled';
       const url = item.link || '';
-      const description = item.description?.slice(0, 200) || item.content?.slice(0, 200) || '';
-      return `${index + 1}. "${title}"${url ? `\n   URL: ${url}` : ''}\n   ${description}${description.length >= 200 ? '...' : ''}`;
+      // Use full content if available, otherwise description
+      const content = item.content || item.description || '';
+      // Apply character limit (0 = no limit)
+      const truncatedContent = charLimit > 0 ? content.slice(0, charLimit) : content;
+      const isTruncated = charLimit > 0 && content.length > charLimit;
+      return `${index + 1}. "${title}"${url ? `\n   URL: ${url}` : ''}\n   ${truncatedContent}${isTruncated ? '...' : ''}`;
     })
     .join('\n\n');
 }
@@ -431,14 +445,16 @@ function buildMatchingPrompt(
   feedTitle: string,
   blogUrl: string,
   exampleComments: string[],
-  communicationPreferences: string = ''
+  communicationPreferences: string = '',
+  blogContentCharLimit: number = DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
+  postContentCharLimit: number = DEFAULT_POST_CONTENT_CHAR_LIMIT
 ): string {
-  const blogSummary = buildBlogSummary(feedItems);
+  const blogSummary = buildBlogSummary(feedItems, 10, blogContentCharLimit);
 
   const postsJson = posts.map((post) => ({
     id: post.id,
     author: post.authorName,
-    content: post.content.slice(0, 500), // Limit content length
+    content: postContentCharLimit > 0 ? post.content.slice(0, postContentCharLimit) : post.content,
   }));
 
   const styleExamples = exampleComments.slice(0, MAX_STYLE_EXAMPLES_IN_PROMPT);
@@ -534,7 +550,9 @@ export async function aiMatchPosts(
   model: string,
   exampleComments: string[] = [],
   preferences: MatchingPreferences = DEFAULT_MATCHING_PREFERENCES,
-  communicationPreferences: string = ''
+  communicationPreferences: string = '',
+  blogContentCharLimit: number = DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
+  postContentCharLimit: number = DEFAULT_POST_CONTENT_CHAR_LIMIT
 ): Promise<MatchResult> {
   const startTime = Date.now();
 
@@ -559,46 +577,63 @@ export async function aiMatchPosts(
 
   // Only call API if there are uncached posts
   if (uncachedPosts.length > 0) {
-    const prompt = buildMatchingPrompt(
-      uncachedPosts,
-      feed.items,
-      feed.title,
-      blogUrl,
-      exampleComments,
-      communicationPreferences
-    );
-
-    try {
-      const response = await chatCompletion(apiKey, {
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 16384,
-      });
-
-      const responseText = response.choices[0]?.message?.content || '';
-      newResults = parseAIResponse(responseText);
-
-      // Cache the new results
-      for (const result of newResults) {
-        const post = uncachedPosts.find((p) => p.id === result.postId);
-        if (post) {
-          cacheAIMatch(post.id, post.platform, result);
-        }
-      }
-
-      console.log(`${LOG_PREFIX} AI returned ${newResults.length} matches`);
-    } catch (error) {
-      console.error(`${LOG_PREFIX} AI matching failed:`, error);
-      // Re-throw InsufficientCreditsError so it can be handled by the caller
-      if ((error as Error)?.name === 'InsufficientCreditsError') {
-        console.log(`${LOG_PREFIX} Re-throwing InsufficientCreditsError from aiMatchPosts`);
-        throw error;
-      }
-      // Fall back to keyword matching for uncached posts
-      const keywordResult = matchPosts(uncachedPosts, [], preferences);
-      return keywordResult;
+    // Process posts in batches to avoid token limits
+    const batches: ExtractedPostRecord[][] = [];
+    for (let i = 0; i < uncachedPosts.length; i += AI_MATCH_BATCH_SIZE) {
+      batches.push(uncachedPosts.slice(i, i + AI_MATCH_BATCH_SIZE));
     }
+
+    console.log(`${LOG_PREFIX} Processing ${uncachedPosts.length} posts in ${batches.length} batch(es)`);
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      console.log(`${LOG_PREFIX} Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} posts)`);
+
+      const prompt = buildMatchingPrompt(
+        batch,
+        feed.items,
+        feed.title,
+        blogUrl,
+        exampleComments,
+        communicationPreferences,
+        blogContentCharLimit,
+        postContentCharLimit
+      );
+
+      try {
+        const response = await chatCompletion(apiKey, {
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 16384,
+        });
+
+        const responseText = response.choices[0]?.message?.content || '';
+        const batchResults = parseAIResponse(responseText);
+
+        // Cache the batch results
+        for (const result of batchResults) {
+          const post = batch.find((p) => p.id === result.postId);
+          if (post) {
+            cacheAIMatch(post.id, post.platform, result);
+          }
+        }
+
+        newResults.push(...batchResults);
+        console.log(`${LOG_PREFIX} Batch ${batchIndex + 1} returned ${batchResults.length} matches`);
+      } catch (error) {
+        console.error(`${LOG_PREFIX} AI matching failed for batch ${batchIndex + 1}:`, error);
+        // Re-throw InsufficientCreditsError so it can be handled by the caller
+        if ((error as Error)?.name === 'InsufficientCreditsError') {
+          console.log(`${LOG_PREFIX} Re-throwing InsufficientCreditsError from aiMatchPosts`);
+          throw error;
+        }
+        // Continue with other batches, this batch will be skipped
+        console.log(`${LOG_PREFIX} Skipping batch ${batchIndex + 1} due to error, continuing with remaining batches`);
+      }
+    }
+
+    console.log(`${LOG_PREFIX} AI returned ${newResults.length} total matches from ${batches.length} batch(es)`);
   }
 
   // Combine cached and new results
@@ -669,11 +704,13 @@ export async function generateReplySuggestions(
   apiKey: string,
   model: string,
   exampleComments: string[] = [],
-  communicationPreferences: string = ''
+  communicationPreferences: string = '',
+  blogContentCharLimit: number = DEFAULT_BLOG_CONTENT_CHAR_LIMIT
 ): Promise<ReplySuggestion[]> {
   console.log(`${LOG_PREFIX} Generating suggestions for post ${post.id}`);
 
-  const blogSummary = buildBlogSummary(feed.items, 3);
+  // Use fewer items for single-post regeneration to save tokens
+  const blogSummary = buildBlogSummary(feed.items, 5, blogContentCharLimit);
 
   const styleExamples = exampleComments.slice(0, MAX_STYLE_EXAMPLES_IN_PROMPT);
   const styleSection =
@@ -883,7 +920,8 @@ function parseHeatCheckResponse(responseText: string): Map<string, HeatCheckResu
 export async function heatCheckPosts(
   matches: MatchedPostWithScore[],
   apiKey: string,
-  model: string
+  model: string,
+  postContentCharLimit: number = DEFAULT_POST_CONTENT_CHAR_LIMIT
 ): Promise<MatchedPostWithScore[]> {
   console.log(`${LOG_PREFIX} Running heat check on ${matches.length} posts`);
 
@@ -902,46 +940,65 @@ export async function heatCheckPosts(
 
   console.log(`${LOG_PREFIX} Found ${results.size} cached heat checks, ${uncachedMatches.length} need analysis`);
 
-  // Call AI for uncached posts
+  // Call AI for uncached posts in batches
   if (uncachedMatches.length > 0) {
-    const postsToAnalyze = uncachedMatches.map((m) => ({
-      id: m.post.id,
-      content: m.post.content.slice(0, 500),
-      author: m.post.authorName,
-    }));
-
-    const prompt = buildHeatCheckPrompt(postsToAnalyze);
-
-    try {
-      const response = await chatCompletion(apiKey, {
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3, // Lower temperature for more consistent classification
-        max_tokens: 16384,
-      });
-
-      const responseText = response.choices[0]?.message?.content || '';
-      const newResults = parseHeatCheckResponse(responseText);
-
-      // Cache and merge results
-      for (const [postId, result] of newResults) {
-        const match = uncachedMatches.find((m) => m.post.id === postId);
-        if (match) {
-          cacheHeatCheck(postId, match.post.platform, result);
-          results.set(postId, result);
-        }
-      }
-
-      console.log(`${LOG_PREFIX} AI heat check returned ${newResults.size} results`);
-    } catch (error) {
-      console.error(`${LOG_PREFIX} Heat check failed:`, error);
-      // Re-throw InsufficientCreditsError so it can be handled by the caller
-      if ((error as Error)?.name === 'InsufficientCreditsError') {
-        console.log(`${LOG_PREFIX} Re-throwing InsufficientCreditsError from heatCheckPosts`);
-        throw error;
-      }
-      // Continue without heat check results for uncached posts
+    const batches: MatchedPostWithScore[][] = [];
+    for (let i = 0; i < uncachedMatches.length; i += AI_MATCH_BATCH_SIZE) {
+      batches.push(uncachedMatches.slice(i, i + AI_MATCH_BATCH_SIZE));
     }
+
+    console.log(`${LOG_PREFIX} Processing ${uncachedMatches.length} posts in ${batches.length} heat check batch(es)`);
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      console.log(
+        `${LOG_PREFIX} Processing heat check batch ${batchIndex + 1}/${batches.length} (${batch.length} posts)`
+      );
+
+      const postsToAnalyze = batch.map((m) => ({
+        id: m.post.id,
+        content: postContentCharLimit > 0 ? m.post.content.slice(0, postContentCharLimit) : m.post.content,
+        author: m.post.authorName,
+      }));
+
+      const prompt = buildHeatCheckPrompt(postsToAnalyze);
+
+      try {
+        const response = await chatCompletion(apiKey, {
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.3, // Lower temperature for more consistent classification
+          max_tokens: 16384,
+        });
+
+        const responseText = response.choices[0]?.message?.content || '';
+        const batchResults = parseHeatCheckResponse(responseText);
+
+        // Cache and merge results
+        for (const [postId, result] of batchResults) {
+          const match = batch.find((m) => m.post.id === postId);
+          if (match) {
+            cacheHeatCheck(postId, match.post.platform, result);
+            results.set(postId, result);
+          }
+        }
+
+        console.log(`${LOG_PREFIX} Heat check batch ${batchIndex + 1} returned ${batchResults.size} results`);
+      } catch (error) {
+        console.error(`${LOG_PREFIX} Heat check failed for batch ${batchIndex + 1}:`, error);
+        // Re-throw InsufficientCreditsError so it can be handled by the caller
+        if ((error as Error)?.name === 'InsufficientCreditsError') {
+          console.log(`${LOG_PREFIX} Re-throwing InsufficientCreditsError from heatCheckPosts`);
+          throw error;
+        }
+        // Continue with other batches
+        console.log(
+          `${LOG_PREFIX} Skipping heat check batch ${batchIndex + 1} due to error, continuing with remaining batches`
+        );
+      }
+    }
+
+    console.log(`${LOG_PREFIX} AI heat check returned ${results.size} total results`);
   }
 
   // Apply heat check results to matches

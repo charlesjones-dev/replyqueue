@@ -1,22 +1,20 @@
 import { ref } from 'vue';
 import type { AppView } from '@shared/types';
-import { getConfig } from '@shared/storage';
+import { useConfig } from './useConfig';
 
 const currentView = ref<AppView>('setup');
 
 export function useAppState() {
+  const { config } = useConfig();
+
   /**
    * Check setup status and determine initial view
+   * Note: loadConfig() should be called before this to populate the shared config state
    */
-  async function checkSetupStatus(): Promise<void> {
-    try {
-      const config = await getConfig();
-      if (config.isSetupComplete && config.apiKey && config.rssFeedUrl) {
-        currentView.value = 'main';
-      } else {
-        currentView.value = 'setup';
-      }
-    } catch {
+  function checkSetupStatus(): void {
+    if (config.value.isSetupComplete && config.value.apiKey && config.value.rssFeedUrl) {
+      currentView.value = 'main';
+    } else {
       currentView.value = 'setup';
     }
   }

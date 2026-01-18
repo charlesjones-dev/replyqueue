@@ -1,33 +1,34 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useAppState } from '../composables/useAppState';
-import { usePosts } from '../composables/usePosts';
+import { usePosts, type PostFilter } from '../composables/usePosts';
 import { useConfig } from '../composables/useConfig';
 import { useToast } from '../composables/useToast';
 import { useNetworkStatus } from '../composables/useNetworkStatus';
 import { useCreditsModal } from '../composables/useCreditsModal';
 import { sendMessage, sendTabMessage, type MessageResponse } from '@shared/messages';
-import StatusBar from '../components/StatusBar.vue';
 import PostCard from '../components/PostCard.vue';
+import QueuedPostCard from '../components/QueuedPostCard.vue';
 import PostCardSkeleton from '../components/PostCardSkeleton.vue';
-import ModelSelector from '../components/ModelSelector.vue';
 import Toast from '../components/Toast.vue';
 
 const { openSettings, openSetup } = useAppState();
-const { config, update: updateConfig } = useConfig();
+const { config } = useConfig();
 const toast = useToast();
 const { isOnline } = useNetworkStatus();
 const creditsModal = useCreditsModal();
 const {
-  filteredPosts,
-  extractedPostCount,
-  totalMatches,
+  filteredMatchedPosts,
+  extractedPosts,
+  queuedPosts,
+  unmatchedPosts,
+  queuedCount,
+  matchedCount,
+  unmatchedCount,
   isLoading,
   isRefreshing,
   error,
   currentFilter,
-  rssFeedStatus,
-  pendingCount,
   repliedCount,
   skippedCount,
   refreshMatches,
@@ -40,11 +41,6 @@ const {
 // AI matching state (includes heat check)
 const isAIMatching = ref(false);
 const aiMatchError = ref<string | null>(null);
-
-// Handle model change
-async function handleModelChange(modelId: string) {
-  await updateConfig({ selectedModel: modelId });
-}
 
 // Format error message for user display
 function formatErrorMessage(error: string): string {
@@ -109,6 +105,7 @@ async function runAIMatching() {
         creditsModal.show(heatCheckResponse.errorData?.requestedTokens, heatCheckResponse.errorData?.availableTokens);
         // Still load posts since AI matching succeeded
         await loadPosts();
+        setFilter('matched');
         toast.warning('AI matching complete, but heat check requires more credits');
         isAIMatching.value = false;
         return;
@@ -119,6 +116,7 @@ async function runAIMatching() {
 
     // Reload posts to show matches with heat check results
     await loadPosts();
+    setFilter('matched');
     toast.success('AI matching complete');
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : 'AI matching failed';
@@ -155,21 +153,22 @@ async function handleRegenerate(postId: string, platform: string) {
   }
 }
 
-type FilterOption = 'all' | 'pending' | 'replied' | 'skipped';
-
-const filters: { value: FilterOption; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'pending', label: 'Pending' },
+const filters: { value: PostFilter; label: string }[] = [
+  { value: 'queued', label: 'Queued' },
+  { value: 'matched', label: 'Matched' },
+  { value: 'unmatched', label: 'Unmatched' },
   { value: 'replied', label: 'Replied' },
   { value: 'skipped', label: 'Skipped' },
 ];
 
-function getFilterCount(filter: FilterOption): number {
+function getFilterCount(filter: PostFilter): number {
   switch (filter) {
-    case 'all':
-      return totalMatches.value;
-    case 'pending':
-      return pendingCount.value;
+    case 'queued':
+      return queuedCount.value;
+    case 'matched':
+      return matchedCount.value;
+    case 'unmatched':
+      return unmatchedCount.value;
     case 'replied':
       return repliedCount.value;
     case 'skipped':
@@ -190,9 +189,49 @@ function handleReplied(postId: string, platform: string) {
 
 function handleOpen(postId: string, platform: string) {
   // Find the post and open its URL
-  const post = filteredPosts.value.find((p) => p.post.id === postId && p.post.platform === platform);
+  const post = filteredMatchedPosts.value.find((p) => p.post.id === postId && p.post.platform === platform);
   if (post?.post.url) {
     window.open(post.post.url, '_blank');
+  }
+}
+
+function handleOpenQueued(postId: string, platform: string) {
+  // Find the queued post and open its URL
+  const post = extractedPosts.value.find((p) => p.id === postId && p.platform === platform);
+  if (post?.url) {
+    window.open(post.url, '_blank');
+  }
+}
+
+// Handle jump to queued post - sends message to content script to scroll to the post
+async function handleJumpToQueuedPost(postId: string, _platform: string) {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const activeTab = tabs[0];
+
+    if (!activeTab?.id) {
+      toast.error('No active tab found. Make sure LinkedIn is open.');
+      return;
+    }
+
+    if (!activeTab.url?.includes('linkedin.com')) {
+      toast.warning('Navigate to LinkedIn to jump to this post.');
+      return;
+    }
+
+    const response = await sendTabMessage(activeTab.id, {
+      type: 'SCROLL_TO_POST',
+      postId,
+    });
+
+    if (response.success) {
+      toast.success('Scrolled to post');
+    } else {
+      toast.warning('Post not found in current feed. It may have scrolled out of view.');
+    }
+  } catch (error) {
+    console.error('Failed to jump to post:', error);
+    toast.error('Failed to jump to post. Make sure LinkedIn is open.');
   }
 }
 
@@ -289,44 +328,6 @@ async function handleJumpToPost(postId: string, _platform: string) {
         </button>
       </div>
 
-      <!-- Model Selector -->
-      <div class="mb-4">
-        <label class="mb-1 block text-xs font-medium text-gray-700">AI Model</label>
-        <div class="flex gap-2">
-          <div class="flex-1">
-            <ModelSelector :model-value="config.selectedModel" @update:model-value="handleModelChange" />
-          </div>
-          <button
-            type="button"
-            class="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-400"
-            :disabled="isAIMatching || !config.apiKey"
-            title="Find relevant posts and analyze their tone"
-            @click="runAIMatching"
-          >
-            <svg v-if="isAIMatching" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <span class="hidden sm:inline">{{ isAIMatching ? 'Analyzing...' : 'AI Match' }}</span>
-          </button>
-        </div>
-        <p v-if="aiMatchError" class="mt-1 text-xs text-red-600">{{ aiMatchError }}</p>
-      </div>
-
-      <!-- Status Bar -->
-      <StatusBar
-        :rss-feed-connected="rssFeedStatus.connected"
-        :rss-feed-message="rssFeedStatus.message"
-        :extracted-post-count="extractedPostCount"
-        :matched-post-count="totalMatches"
-        :is-refreshing="isRefreshing"
-        class="mb-4"
-        @refresh="refreshMatches"
-      />
-
       <!-- Filter tabs -->
       <div class="mb-4 flex rounded-lg bg-gray-100 p-1">
         <button
@@ -397,8 +398,35 @@ async function handleJumpToPost(postId: string, _platform: string) {
         </div>
       </div>
 
-      <!-- Empty state -->
-      <div v-else-if="filteredPosts.length === 0" class="rounded-lg bg-white p-6 text-center shadow">
+      <!-- Empty state for queued tab -->
+      <div
+        v-else-if="currentFilter === 'queued' && queuedPosts.length === 0"
+        class="rounded-lg bg-white p-6 text-center shadow"
+      >
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+          />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Queue is empty</h3>
+        <p class="mt-1 text-xs text-gray-500">
+          <template v-if="extractedPosts.length > 0">
+            All posts have been analyzed. Navigate to LinkedIn to collect more posts.
+          </template>
+          <template v-else>
+            Navigate to a LinkedIn feed to start collecting posts. Posts will appear here automatically as you scroll.
+          </template>
+        </p>
+      </div>
+
+      <!-- Empty state for unmatched tab -->
+      <div
+        v-else-if="currentFilter === 'unmatched' && unmatchedPosts.length === 0"
+        class="rounded-lg bg-white p-6 text-center shadow"
+      >
         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
@@ -407,27 +435,104 @@ async function handleJumpToPost(postId: string, _platform: string) {
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">No posts found</h3>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No unmatched posts</h3>
         <p class="mt-1 text-xs text-gray-500">
-          <template v-if="currentFilter === 'all'">
-            Navigate to a LinkedIn feed to start extracting posts, or check your RSS feed settings.
-          </template>
-          <template v-else> No posts with status "{{ currentFilter }}" found. </template>
+          Posts that don't match your blog content will appear here after AI analysis.
         </p>
-        <button
-          v-if="currentFilter !== 'all'"
-          type="button"
-          class="mt-3 text-sm text-blue-600 hover:underline"
-          @click="setFilter('all')"
-        >
-          View all posts
+        <button type="button" class="mt-3 text-sm text-blue-600 hover:underline" @click="setFilter('queued')">
+          View queued posts
         </button>
       </div>
 
-      <!-- Posts list -->
+      <!-- Empty state for matched/replied/skipped tabs -->
+      <div
+        v-else-if="currentFilter !== 'queued' && currentFilter !== 'unmatched' && filteredMatchedPosts.length === 0"
+        class="rounded-lg bg-white p-6 text-center shadow"
+      >
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No {{ currentFilter }} posts</h3>
+        <p class="mt-1 text-xs text-gray-500">
+          <template v-if="currentFilter === 'matched'">
+            Use the AI Match button to analyze queued posts and find relevant matches.
+          </template>
+          <template v-else> No posts with status "{{ currentFilter }}" found. </template>
+        </p>
+        <button type="button" class="mt-3 text-sm text-blue-600 hover:underline" @click="setFilter('queued')">
+          View queued posts
+        </button>
+      </div>
+
+      <!-- Queued posts list -->
+      <div v-else-if="currentFilter === 'queued'" class="space-y-4">
+        <!-- AI Match button -->
+        <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <p class="text-sm font-medium text-blue-900">Ready to analyze?</p>
+              <p class="text-xs text-blue-700">
+                {{ queuedPosts.length }} post{{ queuedPosts.length === 1 ? '' : 's' }} in queue
+              </p>
+            </div>
+            <button
+              type="button"
+              class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-400"
+              :disabled="isAIMatching || !config.apiKey || queuedPosts.length === 0"
+              title="Find relevant posts and analyze their tone"
+              @click="runAIMatching"
+            >
+              <svg v-if="isAIMatching" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              {{ isAIMatching ? 'Analyzing...' : 'AI Match' }}
+            </button>
+          </div>
+          <p v-if="aiMatchError" class="mt-2 text-xs text-red-600">{{ aiMatchError }}</p>
+          <p v-if="!config.apiKey" class="mt-2 text-xs text-amber-600">
+            Configure your API key in settings to use AI matching.
+          </p>
+        </div>
+
+        <QueuedPostCard
+          v-for="post in queuedPosts"
+          :key="`${post.platform}:${post.id}`"
+          :post="post"
+          @open="handleOpenQueued"
+          @jump-to-post="handleJumpToQueuedPost"
+        />
+      </div>
+
+      <!-- Unmatched posts list -->
+      <div v-else-if="currentFilter === 'unmatched'" class="space-y-4">
+        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <p class="text-sm text-gray-600">
+            These posts were analyzed but didn't match your blog content above the relevance threshold.
+          </p>
+        </div>
+
+        <QueuedPostCard
+          v-for="post in unmatchedPosts"
+          :key="`${post.platform}:${post.id}`"
+          :post="post"
+          @open="handleOpenQueued"
+          @jump-to-post="handleJumpToQueuedPost"
+        />
+      </div>
+
+      <!-- Matched/Replied/Skipped posts list -->
       <div v-else class="space-y-4">
         <PostCard
-          v-for="match in filteredPosts"
+          v-for="match in filteredMatchedPosts"
           :key="`${match.post.platform}:${match.post.id}`"
           :match="match"
           @skip="handleSkip"

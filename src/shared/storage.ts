@@ -222,13 +222,14 @@ export async function clearAllData(): Promise<void> {
 }
 
 /**
- * Clear all caches (extracted posts, matched posts, RSS feed cache)
+ * Clear all caches (extracted posts, matched posts, RSS feed cache, evaluated posts)
  * Preserves user settings like API key and RSS feed URL
  */
 export async function clearAllCaches(): Promise<void> {
   await clearExtractedPosts();
   await clearMatchedPostsWithScore();
   await clearCachedRssFeed();
+  await clearEvaluatedPostIds();
   // Also clear AI match cache if it exists
   if (isStorageAvailable()) {
     try {
@@ -299,6 +300,45 @@ export async function updateMatchedPostStatus(
  */
 export async function clearMatchedPostsWithScore(): Promise<void> {
   await setLocal(STORAGE_KEYS.MATCHED_POSTS_WITH_SCORE, []);
+}
+
+// ============================================================
+// Evaluated post IDs storage (uses chrome.storage.local)
+// Tracks which posts have been through AI matching
+// ============================================================
+
+/**
+ * Get evaluated post IDs from local storage
+ * These are posts that have been processed by AI matching (whether matched or not)
+ */
+export async function getEvaluatedPostIds(): Promise<Set<string>> {
+  const ids = await getLocal<string[]>(STORAGE_KEYS.EVALUATED_POST_IDS);
+  return new Set(ids ?? []);
+}
+
+/**
+ * Save evaluated post IDs to local storage
+ */
+export async function saveEvaluatedPostIds(ids: Set<string>): Promise<void> {
+  await setLocal(STORAGE_KEYS.EVALUATED_POST_IDS, Array.from(ids));
+}
+
+/**
+ * Add post IDs to the evaluated set
+ */
+export async function addEvaluatedPostIds(newIds: string[]): Promise<void> {
+  const existing = await getEvaluatedPostIds();
+  for (const id of newIds) {
+    existing.add(id);
+  }
+  await saveEvaluatedPostIds(existing);
+}
+
+/**
+ * Clear evaluated post IDs
+ */
+export async function clearEvaluatedPostIds(): Promise<void> {
+  await setLocal(STORAGE_KEYS.EVALUATED_POST_IDS, []);
 }
 
 // ============================================================
@@ -489,6 +529,11 @@ export const storage = {
   saveMatchedPostsWithScore,
   updateMatchedPostStatus,
   clearMatchedPostsWithScore,
+  // Evaluated post IDs
+  getEvaluatedPostIds,
+  saveEvaluatedPostIds,
+  addEvaluatedPostIds,
+  clearEvaluatedPostIds,
   // Cached RSS feed
   getCachedRssFeed,
   saveCachedRssFeed,

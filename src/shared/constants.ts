@@ -20,6 +20,30 @@ export const DEFAULT_MATCHING_PREFERENCES: MatchingPreferences = {
   cacheTtlMinutes: 60,
 };
 
+// Default character limit for blog content sent to AI
+export const DEFAULT_BLOG_CONTENT_CHAR_LIMIT = 2500;
+
+// Blog content character limit options (0 = no limit)
+export const BLOG_CONTENT_CHAR_LIMIT_OPTIONS = [
+  { value: 1000, label: '1,000 characters' },
+  { value: 2500, label: '2,500 characters (Recommended)' },
+  { value: 5000, label: '5,000 characters' },
+  { value: 10000, label: '10,000 characters' },
+  { value: 0, label: 'No limit (full content)' },
+] as const;
+
+// Default character limit for social media post content sent to AI
+export const DEFAULT_POST_CONTENT_CHAR_LIMIT = 1000;
+
+// Post content character limit options (0 = no limit)
+export const POST_CONTENT_CHAR_LIMIT_OPTIONS = [
+  { value: 500, label: '500 characters' },
+  { value: 1000, label: '1,000 characters (Recommended)' },
+  { value: 2000, label: '2,000 characters' },
+  { value: 3000, label: '3,000 characters' },
+  { value: 0, label: 'No limit (full content)' },
+] as const;
+
 export const DEFAULT_CONFIG: {
   apiKey: string;
   rssFeedUrl: string;
@@ -28,6 +52,8 @@ export const DEFAULT_CONFIG: {
   matchingPreferences: MatchingPreferences;
   exampleComments: string[];
   communicationPreferences: string;
+  blogContentCharLimit: number;
+  postContentCharLimit: number;
 } = {
   apiKey: '',
   rssFeedUrl: '',
@@ -36,6 +62,8 @@ export const DEFAULT_CONFIG: {
   matchingPreferences: { ...DEFAULT_MATCHING_PREFERENCES },
   exampleComments: [] as string[],
   communicationPreferences: '',
+  blogContentCharLimit: DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
+  postContentCharLimit: DEFAULT_POST_CONTENT_CHAR_LIMIT,
 };
 
 export const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
@@ -49,6 +77,7 @@ export const STORAGE_KEYS = {
   EXAMPLE_COMMENTS: 'exampleComments',
   CACHED_MODELS: 'cachedModels',
   AI_MATCH_CACHE: 'aiMatchCache',
+  EVALUATED_POST_IDS: 'evaluatedPostIds',
 } as const;
 
 // Maximum number of extracted posts to keep in storage
@@ -94,6 +123,9 @@ export const DEFAULT_MAX_MODEL_AGE_DAYS = 365;
 
 // Number of reply suggestions to generate per post
 export const REPLY_SUGGESTIONS_COUNT = 3;
+
+// Maximum posts to send in a single AI matching request
+export const AI_MATCH_BATCH_SIZE = 25;
 
 // Cost tier thresholds (blended price per 1M tokens)
 export const COST_TIER_THRESHOLDS = {

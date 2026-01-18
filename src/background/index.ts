@@ -28,10 +28,15 @@ import {
   getCachedRssFeed,
   saveCachedRssFeed,
   isCachedFeedValid,
+  addEvaluatedPostIds,
 } from '../shared/storage';
-import { DEFAULT_MATCHING_PREFERENCES } from '../shared/constants';
-import { fetchRssFeed, extractKeywordsFromFeed } from './rss-fetcher';
-import { matchPosts, mergeMatches, aiMatchPosts, generateReplySuggestions, heatCheckPosts } from './matcher';
+import {
+  DEFAULT_MATCHING_PREFERENCES,
+  DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
+  DEFAULT_POST_CONTENT_CHAR_LIMIT,
+} from '../shared/constants';
+import { fetchRssFeed } from './rss-fetcher';
+import { mergeMatches, aiMatchPosts, generateReplySuggestions, heatCheckPosts } from './matcher';
 import { fetchModelsWithCache, InsufficientCreditsError } from './openrouter';
 
 const LOG_PREFIX = '[ReplyQueue:Background]';
@@ -163,9 +168,9 @@ async function handleSaveConfig(message: ExtensionMessage): Promise<MessageRespo
 
 /**
  * Handle FETCH_RSS message
- * Fetches RSS feed, extracts keywords, and matches against extracted posts
+ * Refreshes the RSS feed cache (does not perform matching)
  */
-async function handleFetchRss(): Promise<MessageResponse<MatchResult>> {
+async function handleFetchRss(): Promise<MessageResponse<{ feedTitle: string; itemCount: number }>> {
   try {
     const config = await getConfig();
 
@@ -175,71 +180,30 @@ async function handleFetchRss(): Promise<MessageResponse<MatchResult>> {
 
     const preferences = config.matchingPreferences ?? DEFAULT_MATCHING_PREFERENCES;
 
-    // Check if we have a valid cached feed
-    let cachedFeed = await getCachedRssFeed();
-    let feed = cachedFeed?.feed;
+    console.log(`${LOG_PREFIX} Fetching RSS feed from ${config.rssFeedUrl}`);
 
-    if (!cachedFeed || cachedFeed.url !== config.rssFeedUrl || !isCachedFeedValid(cachedFeed)) {
-      console.log(`${LOG_PREFIX} Fetching fresh RSS feed from ${config.rssFeedUrl}`);
+    // Always fetch fresh feed when explicitly requested
+    const feed = await fetchRssFeed(config.rssFeedUrl);
 
-      // Fetch fresh feed
-      feed = await fetchRssFeed(config.rssFeedUrl);
+    // Cache it
+    const newCache: CachedRssFeed = {
+      feed,
+      fetchedAt: Date.now(),
+      ttl: preferences.cacheTtlMinutes * 60 * 1000,
+      url: config.rssFeedUrl,
+    };
+    await saveCachedRssFeed(newCache);
 
-      // Cache it
-      const newCache: CachedRssFeed = {
-        feed,
-        fetchedAt: Date.now(),
-        ttl: preferences.cacheTtlMinutes * 60 * 1000,
-        url: config.rssFeedUrl,
-      };
-      await saveCachedRssFeed(newCache);
+    // Update last fetch time
+    await updateConfig({ lastFetchTime: Date.now() });
 
-      // Update last fetch time
-      await updateConfig({ lastFetchTime: Date.now() });
-    } else {
-      console.log(`${LOG_PREFIX} Using cached RSS feed`);
-      feed = cachedFeed.feed;
-    }
-
-    // Extract keywords from feed
-    const keywords = extractKeywordsFromFeed(feed);
-    console.log(`${LOG_PREFIX} Extracted ${keywords.length} keywords from feed`);
-
-    // Get extracted posts
-    const extractedPosts = await getExtractedPosts();
-    console.log(`${LOG_PREFIX} Found ${extractedPosts.length} extracted posts`);
-
-    if (extractedPosts.length === 0) {
-      return {
-        success: true,
-        data: {
-          matches: [],
-          totalEvaluated: 0,
-          keywords,
-          processingTimeMs: 0,
-        },
-      };
-    }
-
-    // Match posts against keywords
-    const matchResult = matchPosts(extractedPosts, keywords, preferences);
-
-    // Get existing matches to preserve status
-    const existingMatches = await getMatchedPostsWithScore();
-
-    // Merge new matches with existing ones
-    const mergedMatches = mergeMatches(existingMatches, matchResult.matches, preferences.maxPosts);
-
-    // Save merged matches
-    await saveMatchedPostsWithScore(mergedMatches);
-
-    console.log(`${LOG_PREFIX} Matched ${matchResult.matches.length} posts, merged to ${mergedMatches.length}`);
+    console.log(`${LOG_PREFIX} Cached RSS feed "${feed.title}" with ${feed.items.length} items`);
 
     return {
       success: true,
       data: {
-        ...matchResult,
-        matches: mergedMatches,
+        feedTitle: feed.title,
+        itemCount: feed.items.length,
       },
     };
   } catch (error) {
@@ -420,6 +384,10 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
     // Use feed.link (actual blog URL) instead of rssFeedUrl (feed XML URL)
     const blogUrl = feed.link || config.rssFeedUrl.replace(/\/feed\.xml$|\/rss\.xml$|\/feed\/?$|\/rss\/?$/i, '');
 
+    // Get content character limits
+    const blogContentCharLimit = config.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT;
+    const postContentCharLimit = config.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT;
+
     // Perform AI matching
     const matchResult = await aiMatchPosts(
       extractedPosts,
@@ -429,8 +397,15 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
       config.selectedModel,
       exampleComments,
       preferences,
-      config.communicationPreferences ?? ''
+      config.communicationPreferences ?? '',
+      blogContentCharLimit,
+      postContentCharLimit
     );
+
+    // Mark all evaluated posts as processed (whether they matched or not)
+    const evaluatedIds = extractedPosts.map((p) => `${p.platform}:${p.id}`);
+    console.log(`${LOG_PREFIX} Saving ${evaluatedIds.length} evaluated post IDs`);
+    await addEvaluatedPostIds(evaluatedIds);
 
     // Get existing matches to preserve status
     const existingMatches = await getMatchedPostsWithScore();
@@ -527,6 +502,9 @@ async function handleGenerateSuggestions(
     const blogUrl =
       cachedFeed.feed.link || config.rssFeedUrl.replace(/\/feed\.xml$|\/rss\.xml$|\/feed\/?$|\/rss\/?$/i, '');
 
+    // Get blog content character limit
+    const blogContentCharLimit = config.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT;
+
     // Generate suggestions
     const suggestions = await generateReplySuggestions(
       post,
@@ -535,7 +513,8 @@ async function handleGenerateSuggestions(
       config.apiKey,
       config.selectedModel,
       exampleComments,
-      config.communicationPreferences ?? ''
+      config.communicationPreferences ?? '',
+      blogContentCharLimit
     );
 
     // Update the matched post with new suggestions
@@ -598,8 +577,11 @@ async function handleHeatCheckPosts(): Promise<MessageResponse> {
       return { success: true, data: { message: 'No posts to analyze' } };
     }
 
+    // Get post content character limit
+    const postContentCharLimit = config.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT;
+
     // Run heat check
-    const updatedPosts = await heatCheckPosts(matchedPosts, config.apiKey, config.selectedModel);
+    const updatedPosts = await heatCheckPosts(matchedPosts, config.apiKey, config.selectedModel, postContentCharLimit);
 
     // Log results
     const withHeatCheck = updatedPosts.filter((p) => p.heatCheck).length;

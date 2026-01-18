@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAppState } from './composables/useAppState';
+import { useConfig } from './composables/useConfig';
 import SetupView from './views/SetupView.vue';
 import MainView from './views/MainView.vue';
 import SettingsView from './views/SettingsView.vue';
@@ -8,10 +9,13 @@ import LoadingSpinner from './components/LoadingSpinner.vue';
 import InsufficientCreditsModal from './components/InsufficientCreditsModal.vue';
 
 const { currentView, checkSetupStatus } = useAppState();
+const { loadConfig } = useConfig();
 const isInitializing = ref(true);
 
 onMounted(async () => {
-  await checkSetupStatus();
+  // Load config into shared state before checking setup status
+  await loadConfig();
+  checkSetupStatus();
   isInitializing.value = false;
 });
 </script>

@@ -16,9 +16,20 @@ import {
   updateExampleComment,
   clearCachedRssFeed,
   clearAllCaches,
+  getCachedRssFeed,
+  isCachedFeedValid,
 } from '@shared/storage';
+import type { CachedRssFeed } from '@shared/types';
 import { sendMessage } from '@shared/messages';
-import { DEFAULT_MATCHING_PREFERENCES, CACHE_TTL_OPTIONS, MAX_POSTS_OPTIONS } from '@shared/constants';
+import {
+  DEFAULT_MATCHING_PREFERENCES,
+  CACHE_TTL_OPTIONS,
+  MAX_POSTS_OPTIONS,
+  BLOG_CONTENT_CHAR_LIMIT_OPTIONS,
+  DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
+  POST_CONTENT_CHAR_LIMIT_OPTIONS,
+  DEFAULT_POST_CONTENT_CHAR_LIMIT,
+} from '@shared/constants';
 
 export function useSettingsView() {
   const { config, loadConfig, update } = useConfig();
@@ -34,6 +45,8 @@ export function useSettingsView() {
   const exampleComments = ref<string[]>([]);
   const newExampleComment = ref('');
   const communicationPreferences = ref('');
+  const blogContentCharLimit = ref(DEFAULT_BLOG_CONTENT_CHAR_LIMIT);
+  const postContentCharLimit = ref(DEFAULT_POST_CONTENT_CHAR_LIMIT);
 
   // UI state
   const isLoading = ref(false);
@@ -55,6 +68,9 @@ export function useSettingsView() {
   const feedItemCount = ref<number | null>(null);
   const saveError = ref<string | null>(null);
 
+  // RSS feed cache status
+  const cachedFeed = ref<CachedRssFeed | null>(null);
+
   // Track original values for change detection
   const originalValues = ref({
     apiKey: '',
@@ -65,6 +81,8 @@ export function useSettingsView() {
     cacheTtlMinutes: DEFAULT_MATCHING_PREFERENCES.cacheTtlMinutes,
     exampleComments: [] as string[],
     communicationPreferences: '',
+    blogContentCharLimit: DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
+    postContentCharLimit: DEFAULT_POST_CONTENT_CHAR_LIMIT,
   });
 
   // Computed values
@@ -78,6 +96,22 @@ export function useSettingsView() {
     return apiKey.value.slice(0, 8) + '...' + apiKey.value.slice(-4);
   });
 
+  const rssFeedStatus = computed(() => {
+    if (!cachedFeed.value) {
+      return { connected: false, message: 'Not connected' };
+    }
+
+    if (!isCachedFeedValid(cachedFeed.value)) {
+      return { connected: false, message: 'Cache expired' };
+    }
+
+    const minutesAgo = Math.round((Date.now() - cachedFeed.value.fetchedAt) / 1000 / 60);
+    return {
+      connected: true,
+      message: `Last updated ${minutesAgo}m ago`,
+    };
+  });
+
   // Watch for changes
   watch(
     [
@@ -89,6 +123,8 @@ export function useSettingsView() {
       cacheTtlMinutes,
       exampleComments,
       communicationPreferences,
+      blogContentCharLimit,
+      postContentCharLimit,
     ],
     () => {
       checkForChanges();
@@ -108,7 +144,9 @@ export function useSettingsView() {
       maxPosts.value !== originalValues.value.maxPosts ||
       cacheTtlMinutes.value !== originalValues.value.cacheTtlMinutes ||
       JSON.stringify(exampleComments.value) !== JSON.stringify(originalValues.value.exampleComments) ||
-      communicationPreferences.value !== originalValues.value.communicationPreferences;
+      communicationPreferences.value !== originalValues.value.communicationPreferences ||
+      blogContentCharLimit.value !== originalValues.value.blogContentCharLimit ||
+      postContentCharLimit.value !== originalValues.value.postContentCharLimit;
 
     hasUnsavedChanges.value = changed;
   }
@@ -131,9 +169,14 @@ export function useSettingsView() {
       maxPosts.value = prefs.maxPosts;
       cacheTtlMinutes.value = prefs.cacheTtlMinutes;
       communicationPreferences.value = cfg.communicationPreferences ?? '';
+      blogContentCharLimit.value = cfg.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT;
+      postContentCharLimit.value = cfg.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT;
 
       // Load example comments
       exampleComments.value = await getExampleComments();
+
+      // Load cached RSS feed status
+      cachedFeed.value = await getCachedRssFeed();
 
       // Store original values
       originalValues.value = {
@@ -145,6 +188,8 @@ export function useSettingsView() {
         cacheTtlMinutes: prefs.cacheTtlMinutes,
         exampleComments: [...exampleComments.value],
         communicationPreferences: cfg.communicationPreferences ?? '',
+        blogContentCharLimit: cfg.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
+        postContentCharLimit: cfg.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT,
       };
 
       hasUnsavedChanges.value = false;
@@ -195,6 +240,8 @@ export function useSettingsView() {
         feedValid.value = true;
         feedTitle.value = result.feedTitle ?? null;
         feedItemCount.value = result.itemCount ?? null;
+        // Refresh cached feed status after successful test
+        cachedFeed.value = await getCachedRssFeed();
       } else {
         feedError.value = result.error ?? 'Invalid RSS feed';
       }
@@ -225,6 +272,8 @@ export function useSettingsView() {
         selectedModel: selectedModel.value,
         matchingPreferences,
         communicationPreferences: communicationPreferences.value,
+        blogContentCharLimit: blogContentCharLimit.value,
+        postContentCharLimit: postContentCharLimit.value,
       });
 
       // Save example comments separately
@@ -256,6 +305,8 @@ export function useSettingsView() {
         cacheTtlMinutes: cacheTtlMinutes.value,
         exampleComments: [...exampleComments.value],
         communicationPreferences: communicationPreferences.value,
+        blogContentCharLimit: blogContentCharLimit.value,
+        postContentCharLimit: postContentCharLimit.value,
       };
 
       hasUnsavedChanges.value = false;
@@ -281,6 +332,8 @@ export function useSettingsView() {
     cacheTtlMinutes.value = originalValues.value.cacheTtlMinutes;
     exampleComments.value = [...originalValues.value.exampleComments];
     communicationPreferences.value = originalValues.value.communicationPreferences;
+    blogContentCharLimit.value = originalValues.value.blogContentCharLimit;
+    postContentCharLimit.value = originalValues.value.postContentCharLimit;
 
     // Clear validation state
     apiKeyError.value = null;
@@ -380,6 +433,8 @@ export function useSettingsView() {
     exampleComments,
     newExampleComment,
     communicationPreferences,
+    blogContentCharLimit,
+    postContentCharLimit,
 
     // UI state
     isLoading,
@@ -403,10 +458,13 @@ export function useSettingsView() {
     // Computed
     canSave,
     maskedApiKey,
+    rssFeedStatus,
 
     // Constants for UI
     cacheTtlOptions: CACHE_TTL_OPTIONS,
     maxPostsOptions: MAX_POSTS_OPTIONS,
+    blogContentCharLimitOptions: BLOG_CONTENT_CHAR_LIMIT_OPTIONS,
+    postContentCharLimitOptions: POST_CONTENT_CHAR_LIMIT_OPTIONS,
 
     // Actions
     loadSettings,

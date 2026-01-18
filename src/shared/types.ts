@@ -28,6 +28,10 @@ export interface ExtensionConfig {
   exampleComments?: string[];
   /** Communication preferences/rules for AI-generated replies */
   communicationPreferences?: string;
+  /** Character limit for blog content sent to AI (0 = no limit) */
+  blogContentCharLimit?: number;
+  /** Character limit for social media post content sent to AI (0 = no limit) */
+  postContentCharLimit?: number;
 }
 
 export interface Post {
