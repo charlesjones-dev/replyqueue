@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.output/
+.nuxt/
+
+# Cache
+.turbo/
+*.cache/
+
+# Package manager
+pnpm-lock.yaml
+
+# Auto-generated
+*.min.js
+*.min.css
+
+# Infrastructure/config files
+docker/
+.github/
+*.yml
+*.yaml
+
+# Documentation
+*.md
+
+# Claude
+.claude/
+
+.env
+
+docs/

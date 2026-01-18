@@ -1,0 +1,438 @@
+/**
+ * LinkedIn platform adapter for ReplyQueue extension
+ * Implements post extraction from LinkedIn's feed
+ */
+
+import type { PlatformAdapter, ExtractedPost, FeedSelectors } from '../types'
+import {
+  linkedInSelectors,
+  linkedInExtraSelectors,
+  linkedInDataAttributes,
+  linkedInUrlPatterns,
+} from './selectors'
+
+const LOG_PREFIX = '[ReplyQueue:LinkedIn]'
+
+/**
+ * LinkedIn platform adapter implementation
+ */
+export class LinkedInAdapter implements PlatformAdapter {
+  readonly platformId = 'linkedin'
+  readonly platformName = 'LinkedIn'
+  readonly selectors: FeedSelectors = linkedInSelectors
+
+  /**
+   * Check if the current page is a LinkedIn feed page
+   */
+  isFeedPage(url: string): boolean {
+    return linkedInUrlPatterns.feed.test(url)
+  }
+
+  /**
+   * Find all post elements currently in the DOM
+   */
+  findPostElements(): Element[] {
+    const elements = document.querySelectorAll(this.selectors.postItem)
+    return Array.from(elements)
+  }
+
+  /**
+   * Get the unique ID for a post element
+   */
+  getPostId(element: Element): string | null {
+    // Try to get the data-urn attribute
+    const urn = element.getAttribute(linkedInDataAttributes.postUrn)
+    if (urn) {
+      const activityMatch = urn.match(linkedInDataAttributes.activityUrnPattern)
+      if (activityMatch) {
+        return activityMatch[1]
+      }
+      const shareMatch = urn.match(linkedInDataAttributes.shareUrnPattern)
+      if (shareMatch) {
+        return shareMatch[1]
+      }
+    }
+
+    // Check parent elements for the URN
+    const parent = element.closest('[data-urn]')
+    if (parent) {
+      const parentUrn = parent.getAttribute('data-urn')
+      if (parentUrn) {
+        const match = parentUrn.match(linkedInDataAttributes.activityUrnPattern)
+          || parentUrn.match(linkedInDataAttributes.shareUrnPattern)
+        if (match) {
+          return match[1]
+        }
+      }
+    }
+
+    // Fallback: generate a hash from the content
+    const content = this.extractTextContent(element, this.selectors.postContent)
+    if (content) {
+      return this.hashString(content.substring(0, 100))
+    }
+
+    return null
+  }
+
+  /**
+   * Generate the permalink URL for a post
+   */
+  getPostUrl(postId: string): string {
+    return `${linkedInUrlPatterns.postPermalink}urn:li:activity:${postId}`
+  }
+
+  /**
+   * Scroll the page to a specific post
+   * @returns true if post was found and scrolled to, false otherwise
+   */
+  scrollToPost(postId: string): boolean {
+    const postElement = document.querySelector(
+      `[data-urn*="${postId}"], [data-urn*="activity:${postId}"]`
+    )
+    if (postElement) {
+      postElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Highlight the post briefly
+      const originalOutline = (postElement as HTMLElement).style.outline
+      const originalTransition = (postElement as HTMLElement).style.transition
+      ;(postElement as HTMLElement).style.transition = 'outline 0.3s ease'
+      ;(postElement as HTMLElement).style.outline = '2px solid #0a66c2'
+      setTimeout(() => {
+        ;(postElement as HTMLElement).style.outline = originalOutline
+        ;(postElement as HTMLElement).style.transition = originalTransition
+      }, 2000)
+      return true
+    } else {
+      console.warn(`${LOG_PREFIX} Could not find post with ID: ${postId}`)
+      return false
+    }
+  }
+
+  /**
+   * Extract a post from a DOM element
+   */
+  extractPost(element: Element): ExtractedPost | null {
+    try {
+      const postId = this.getPostId(element)
+      if (!postId) {
+        console.debug(`${LOG_PREFIX} Could not extract post ID from element`)
+        return null
+      }
+
+      // Check if this is a sponsored post and skip it
+      if (this.isSponsored(element)) {
+        console.debug(`${LOG_PREFIX} Skipping sponsored post: ${postId}`)
+        return null
+      }
+
+      const authorName = this.extractAuthorName(element)
+      if (!authorName) {
+        console.debug(`${LOG_PREFIX} Could not extract author name for post: ${postId}`)
+        return null
+      }
+
+      const content = this.extractPostContent(element)
+      if (!content) {
+        console.debug(`${LOG_PREFIX} Could not extract content for post: ${postId}`)
+        return null
+      }
+
+      const isRepost = this.isRepost(element)
+
+      const post: ExtractedPost = {
+        id: postId,
+        url: this.getPostUrl(postId),
+        authorName,
+        authorHeadline: this.extractAuthorHeadline(element),
+        authorProfileUrl: this.extractAuthorProfileUrl(element),
+        content,
+        publishedAt: this.extractTimestamp(element),
+        reactionCount: this.extractEngagementCount(element, this.selectors.reactionCount),
+        commentCount: this.extractEngagementCount(element, this.selectors.commentCount),
+        repostCount: this.extractEngagementCount(element, this.selectors.repostCount),
+        isRepost,
+        originalPost: isRepost ? this.extractOriginalPost(element) : undefined,
+        contentType: this.detectContentType(element),
+        platform: this.platformId,
+        extractedAt: Date.now(),
+      }
+
+      console.debug(`${LOG_PREFIX} Extracted post:`, post.id, post.authorName)
+      return post
+    } catch (error) {
+      console.error(`${LOG_PREFIX} Error extracting post:`, error)
+      return null
+    }
+  }
+
+  /**
+   * Extract text content from an element using a selector
+   */
+  private extractTextContent(container: Element, selector: string): string | undefined {
+    // Try each selector in the comma-separated list
+    const selectors = selector.split(',').map(s => s.trim())
+
+    for (const sel of selectors) {
+      const element = container.querySelector(sel)
+      if (element) {
+        const text = element.textContent?.trim()
+        if (text) {
+          return text
+        }
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Extract the author's name from a post element
+   */
+  private extractAuthorName(container: Element): string | undefined {
+    const selectors = this.selectors.authorName.split(',').map(s => s.trim())
+
+    for (const selector of selectors) {
+      const element = container.querySelector(selector)
+      if (element) {
+        // Handle visually-hidden elements that contain the full name
+        const text = element.textContent?.trim()
+        if (text && !text.includes('View') && !text.includes('profile')) {
+          // Clean up the name - remove extra whitespace and newlines
+          return text.replace(/\s+/g, ' ').split('\n')[0].trim()
+        }
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Extract the author's headline/description
+   */
+  private extractAuthorHeadline(container: Element): string | undefined {
+    if (!this.selectors.authorHeadline) return undefined
+    const text = this.extractTextContent(container, this.selectors.authorHeadline)
+    if (text) {
+      // Clean up and return just the first line/part
+      return text.split('\n')[0].split('  ')[0].trim()
+    }
+    return undefined
+  }
+
+  /**
+   * Extract the author's profile URL
+   */
+  private extractAuthorProfileUrl(container: Element): string | undefined {
+    if (!this.selectors.authorProfileLink) return undefined
+
+    const selectors = this.selectors.authorProfileLink.split(',').map(s => s.trim())
+
+    for (const selector of selectors) {
+      const link = container.querySelector(selector) as HTMLAnchorElement | null
+      if (link?.href && link.href.includes('/in/')) {
+        return link.href.split('?')[0] // Remove query params
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Extract the main post content
+   */
+  private extractPostContent(container: Element): string | undefined {
+    const selectors = this.selectors.postContent.split(',').map(s => s.trim())
+
+    for (const selector of selectors) {
+      const element = container.querySelector(selector)
+      if (element) {
+        // Get all text content, preserving some structure
+        const text = this.getCleanTextContent(element)
+        if (text && text.length > 10) {
+          return text
+        }
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Get clean text content from an element, handling LinkedIn's complex DOM
+   */
+  private getCleanTextContent(element: Element): string {
+    // Clone the element to avoid modifying the original
+    const clone = element.cloneNode(true) as Element
+
+    // Remove hidden elements
+    clone.querySelectorAll('.visually-hidden, [aria-hidden="true"]').forEach(el => {
+      // Keep aria-hidden spans that contain the actual visible text
+      if (!el.closest('.update-components-text')) {
+        el.remove()
+      }
+    })
+
+    // Remove "see more" buttons
+    clone.querySelectorAll('.feed-shared-inline-show-more-text__see-more-less-toggle').forEach(el => el.remove())
+
+    let text = clone.textContent || ''
+
+    // Clean up whitespace
+    text = text.replace(/\s+/g, ' ').trim()
+
+    // Remove common LinkedIn UI text
+    text = text.replace(/\s*(see more|see less|…more)\s*/gi, '').trim()
+
+    return text
+  }
+
+  /**
+   * Extract the post timestamp
+   */
+  private extractTimestamp(container: Element): string | undefined {
+    if (!this.selectors.postTimestamp) return undefined
+
+    const selectors = this.selectors.postTimestamp.split(',').map(s => s.trim())
+
+    for (const selector of selectors) {
+      const element = container.querySelector(selector)
+      if (element) {
+        // Check for datetime attribute first
+        const datetime = element.getAttribute('datetime')
+        if (datetime) {
+          return datetime
+        }
+        // Otherwise return the text content (relative time like "2h")
+        return element.textContent?.trim()
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Extract engagement count from a selector
+   */
+  private extractEngagementCount(container: Element, selector?: string): number | undefined {
+    if (!selector) return undefined
+
+    const selectors = selector.split(',').map(s => s.trim())
+
+    for (const sel of selectors) {
+      const element = container.querySelector(sel)
+      if (element) {
+        const text = element.textContent?.trim() || ''
+        const count = this.parseCount(text)
+        if (count !== undefined) {
+          return count
+        }
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Parse a count string (e.g., "1.2K", "500", "1,234") to a number
+   */
+  private parseCount(text: string): number | undefined {
+    if (!text) return undefined
+
+    // Extract the numeric part
+    const match = text.match(/[\d,.]+\s*[kKmM]?/)
+    if (!match) return undefined
+
+    let numStr = match[0].replace(/,/g, '').trim()
+    let multiplier = 1
+
+    if (numStr.toLowerCase().endsWith('k')) {
+      multiplier = 1000
+      numStr = numStr.slice(0, -1)
+    } else if (numStr.toLowerCase().endsWith('m')) {
+      multiplier = 1000000
+      numStr = numStr.slice(0, -1)
+    }
+
+    const num = parseFloat(numStr)
+    return isNaN(num) ? undefined : Math.round(num * multiplier)
+  }
+
+  /**
+   * Check if the post is a repost
+   */
+  private isRepost(container: Element): boolean {
+    if (!this.selectors.repostIndicator) return false
+
+    const indicator = container.querySelector(this.selectors.repostIndicator)
+    if (indicator) {
+      const text = indicator.textContent?.toLowerCase() || ''
+      return text.includes('repost')
+    }
+
+    // Also check for reshare URN
+    const urn = container.getAttribute('data-urn') || ''
+    return urn.includes('reshare')
+  }
+
+  /**
+   * Check if the post is sponsored
+   */
+  private isSponsored(container: Element): boolean {
+    const indicator = container.querySelector(linkedInExtraSelectors.sponsoredIndicator)
+    if (indicator) return true
+
+    // Check for "Promoted" or "Sponsored" text
+    const actorDescription = container.querySelector('.update-components-actor__sub-description')
+    if (actorDescription) {
+      const text = actorDescription.textContent?.toLowerCase() || ''
+      return text.includes('promoted') || text.includes('sponsored')
+    }
+
+    return false
+  }
+
+  /**
+   * Extract the original post info from a repost
+   */
+  private extractOriginalPost(container: Element): ExtractedPost['originalPost'] {
+    const originalName = this.extractTextContent(container, linkedInExtraSelectors.originalPoster)
+    const originalContent = this.extractTextContent(container, linkedInExtraSelectors.originalContent)
+
+    if (originalName || originalContent) {
+      return {
+        authorName: originalName || 'Unknown',
+        content: originalContent,
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Detect the type of content in the post
+   */
+  private detectContentType(container: Element): ExtractedPost['contentType'] {
+    if (container.querySelector(linkedInExtraSelectors.pollContent)) {
+      return 'poll'
+    }
+    if (container.querySelector(linkedInExtraSelectors.videoContent)) {
+      return 'video'
+    }
+    if (container.querySelector(linkedInExtraSelectors.documentShare)) {
+      return 'document'
+    }
+    if (container.querySelector(this.selectors.articleShare || '')) {
+      return 'article'
+    }
+    if (container.querySelector(this.selectors.postImage || '')) {
+      return 'image'
+    }
+    return 'text'
+  }
+
+  /**
+   * Simple hash function for generating fallback IDs
+   */
+  private hashString(str: string): string {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36)
+  }
+}
