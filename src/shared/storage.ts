@@ -83,28 +83,80 @@ async function remove(key: string): Promise<void> {
   }
 }
 
+// ============================================================
+// API Key storage (uses chrome.storage.local ONLY for security)
+// API keys are never synced across devices to limit exposure
+// ============================================================
+
+/**
+ * Get API key from local storage only (never synced)
+ */
+export async function getApiKey(): Promise<string> {
+  const key = await getLocal<string>(STORAGE_KEYS.API_KEY);
+  return key ?? '';
+}
+
+/**
+ * Save API key to local storage only (never synced)
+ */
+export async function saveApiKey(apiKey: string): Promise<void> {
+  await setLocal(STORAGE_KEYS.API_KEY, apiKey);
+}
+
+/**
+ * Clear API key from local storage
+ */
+export async function clearApiKey(): Promise<void> {
+  if (!isStorageAvailable()) {
+    localStorage.removeItem(`local_${STORAGE_KEYS.API_KEY}`);
+    return;
+  }
+  await chrome.storage.local.remove(STORAGE_KEYS.API_KEY);
+}
+
 /**
  * Get extension configuration
+ * Merges synced config with locally-stored API key
  */
 export async function getConfig(): Promise<ExtensionConfig> {
   const config = await get<ExtensionConfig>(STORAGE_KEYS.CONFIG);
-  return config ?? { ...DEFAULT_CONFIG };
+  const apiKey = await getApiKey();
+  return {
+    ...DEFAULT_CONFIG,
+    ...config,
+    apiKey,
+  };
 }
 
 /**
  * Save extension configuration
+ * Stores API key separately in local storage (never synced)
  */
 export async function saveConfig(config: ExtensionConfig): Promise<void> {
-  await set(STORAGE_KEYS.CONFIG, config);
+  // Extract and save API key to local storage
+  const { apiKey, ...syncConfig } = config;
+  await saveApiKey(apiKey);
+  // Save rest of config to sync storage with empty apiKey
+  await set(STORAGE_KEYS.CONFIG, { ...syncConfig, apiKey: '' });
 }
 
 /**
  * Update partial configuration
+ * Handles API key separately from synced config
  */
 export async function updateConfig(updates: Partial<ExtensionConfig>): Promise<ExtensionConfig> {
   const current = await getConfig();
   const updated = { ...current, ...updates };
-  await saveConfig(updated);
+
+  // If apiKey is being updated, save it separately
+  if ('apiKey' in updates) {
+    await saveApiKey(updated.apiKey);
+  }
+
+  // Save the rest to sync storage with empty apiKey
+  const { apiKey: _, ...syncConfig } = updated;
+  await set(STORAGE_KEYS.CONFIG, { ...syncConfig, apiKey: '' });
+
   return updated;
 }
 
@@ -263,6 +315,7 @@ export async function clearExtractedPosts(): Promise<void> {
 export async function clearAllData(): Promise<void> {
   await remove(STORAGE_KEYS.CONFIG);
   await remove(STORAGE_KEYS.MATCHED_POSTS);
+  await clearApiKey();
 }
 
 /**
@@ -560,6 +613,11 @@ export const storage = {
   get,
   set,
   remove,
+  // API key (local storage only)
+  getApiKey,
+  saveApiKey,
+  clearApiKey,
+  // Config
   getConfig,
   saveConfig,
   updateConfig,

@@ -79,6 +79,7 @@ export const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
 
 export const STORAGE_KEYS = {
   CONFIG: 'config',
+  API_KEY: 'apiKey',
   MATCHED_POSTS: 'matchedPosts',
   EXTRACTED_POSTS: 'extractedPosts',
   CACHED_RSS_FEED: 'cachedRssFeed',
