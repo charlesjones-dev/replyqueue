@@ -10,8 +10,6 @@ export type AppView = 'setup' | 'main' | 'settings';
 export interface MatchingPreferences {
   /** Minimum relevance score threshold (0-1) */
   threshold: number;
-  /** Maximum number of posts to show */
-  maxPosts: number;
   /** Cache TTL in minutes */
   cacheTtlMinutes: number;
 }
@@ -32,6 +30,10 @@ export interface ExtensionConfig {
   blogContentCharLimit?: number;
   /** Character limit for social media post content sent to AI (0 = no limit) */
   postContentCharLimit?: number;
+  /** Maximum posts to keep in queue while browsing */
+  maxQueueSize?: number;
+  /** Maximum matched posts to keep after AI analysis */
+  maxMatchedPosts?: number;
 }
 
 export interface Post {

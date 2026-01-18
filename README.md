@@ -40,12 +40,12 @@ For now, install from source using the instructions below.
 
 2. **Install dependencies**
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. **Build the extension**
    ```bash
-   npm run build
+   pnpm build
    ```
 
 4. **Load in Chrome**
@@ -65,28 +65,28 @@ For now, install from source using the instructions below.
 ### Prerequisites
 
 - Node.js 18+
-- npm 9+
+- pnpm 9+
 - Chrome browser
 
 ### Commands
 
 ```bash
 # Start development server with hot reload
-npm run dev
+pnpm dev
 
 # Run all tests
-npm test
+pnpm test
 
 # Run tests in watch mode
-npm run test:watch
+pnpm test:watch
 
 # Build for production
-npm run build
+pnpm build
 ```
 
 ### Loading the Development Build
 
-1. Run `npm run dev` to start the development server
+1. Run `pnpm dev` to start the development server
 2. Open `chrome://extensions/`
 3. Enable Developer mode
 4. Click "Load unpacked" and select the `dist` folder
@@ -182,18 +182,21 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
 ### Matching Preferences
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| Relevance Threshold | 0.3 | Minimum score (0-1) for a post to be considered a match |
-| Max Posts | 20 | Maximum number of matched posts to display |
-| Cache TTL | 60 min | How long to cache RSS feed data |
+| Option | Default | Options | Description |
+|--------|---------|---------|-------------|
+| Relevance Threshold | 30% | 10-90% | Minimum score for a post to be considered a match |
+| Max Posts to Show | 20 | 10, 20, 30, 50, 100 | Maximum number of matched posts to display |
+| RSS Cache Duration | 60 min | 15, 30, 60, 120, 240 | How long to cache RSS feed before refreshing |
+| Blog Content Sent to AI | 2,500 chars | 1K, 2.5K, 5K, 10K, No limit | Amount of blog content included when matching |
+| Social Post Content Sent to AI | 1,000 chars | 500, 1K, 2K, 3K, No limit | Amount of post content included when evaluating |
 
 ### AI Settings
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| Model | Claude Haiku 4.5 | OpenRouter model for semantic matching |
-| Writing Examples | - | Your comment examples to match reply style |
+| Model | anthropic/claude-haiku-4.5 | OpenRouter model for semantic matching and reply generation |
+| Writing Style Examples | - | Up to 10 examples of your previous comments to match your tone |
+| Communication Preferences | - | Custom writing rules for AI-generated replies (e.g., formatting, tone) |
 
 ---
 
@@ -225,7 +228,7 @@ See [privacy-policy.md](./privacy-policy.md) for the full privacy policy.
 
 ### Extension not loading
 - Ensure you're loading the `dist` folder, not the project root
-- Check for build errors: `npm run build`
+- Check for build errors: `pnpm build`
 - Look for errors in `chrome://extensions/`
 
 ### Posts not being extracted

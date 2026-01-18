@@ -6,17 +6,16 @@ import type { MatchingPreferences } from './types';
 
 // src/shared/constants.ts
 export const RECOMMENDED_MODELS = [
-  'anthropic/claude-haiku-4.5', // Default - fast, cheap, good for this use case
   'anthropic/claude-sonnet-4.5', // Higher quality option
+  'anthropic/claude-haiku-4.5', // Default - fast, cheap, good for this use case
 ] as const;
 
 // Default model - fast, cheap, good enough for matching/reply generation
-export const DEFAULT_MODEL = 'anthropic/claude-haiku-4.5';
+export const DEFAULT_MODEL = 'claude-sonnet-4.5';
 
 // Default matching preferences
 export const DEFAULT_MATCHING_PREFERENCES: MatchingPreferences = {
   threshold: 0.3,
-  maxPosts: 20,
   cacheTtlMinutes: 60,
 };
 
@@ -33,16 +32,22 @@ export const BLOG_CONTENT_CHAR_LIMIT_OPTIONS = [
 ] as const;
 
 // Default character limit for social media post content sent to AI
-export const DEFAULT_POST_CONTENT_CHAR_LIMIT = 1000;
+export const DEFAULT_POST_CONTENT_CHAR_LIMIT = 2000;
+
+// Default max queue size (limits posts collected while browsing)
+export const DEFAULT_MAX_QUEUE_SIZE = 25;
 
 // Post content character limit options (0 = no limit)
 export const POST_CONTENT_CHAR_LIMIT_OPTIONS = [
   { value: 500, label: '500 characters' },
-  { value: 1000, label: '1,000 characters (Recommended)' },
-  { value: 2000, label: '2,000 characters' },
+  { value: 1000, label: '1,000 characters' },
+  { value: 2000, label: '2,000 characters (Recommended)' },
   { value: 3000, label: '3,000 characters' },
   { value: 0, label: 'No limit (full content)' },
 ] as const;
+
+// Default max matched posts (configurable limit for matched posts after AI analysis)
+export const DEFAULT_MAX_MATCHED_POSTS = 100;
 
 export const DEFAULT_CONFIG: {
   apiKey: string;
@@ -54,6 +59,8 @@ export const DEFAULT_CONFIG: {
   communicationPreferences: string;
   blogContentCharLimit: number;
   postContentCharLimit: number;
+  maxQueueSize: number;
+  maxMatchedPosts: number;
 } = {
   apiKey: '',
   rssFeedUrl: '',
@@ -64,6 +71,8 @@ export const DEFAULT_CONFIG: {
   communicationPreferences: '',
   blogContentCharLimit: DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
   postContentCharLimit: DEFAULT_POST_CONTENT_CHAR_LIMIT,
+  maxQueueSize: DEFAULT_MAX_QUEUE_SIZE,
+  maxMatchedPosts: DEFAULT_MAX_MATCHED_POSTS,
 };
 
 export const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
@@ -83,9 +92,6 @@ export const STORAGE_KEYS = {
 // Maximum number of extracted posts to keep in storage
 export const MAX_EXTRACTED_POSTS = 500;
 
-// Maximum number of matched posts to keep
-export const MAX_MATCHED_POSTS = 100;
-
 // Maximum number of example comments
 export const MAX_EXAMPLE_COMMENTS = 10;
 
@@ -99,8 +105,8 @@ export const RSS_URL_PATTERN = /^https?:\/\/.+/i;
 // RSS cache TTL options (in minutes)
 export const CACHE_TTL_OPTIONS = [15, 30, 60, 120, 240] as const;
 
-// Max posts display options
-export const MAX_POSTS_OPTIONS = [10, 20, 30, 50, 100] as const;
+// Max matched posts options (configurable)
+export const MAX_MATCHED_POSTS_OPTIONS = [25, 50, 100, 150, 200] as const;
 
 // Relevance threshold presets
 export const THRESHOLD_PRESETS = {

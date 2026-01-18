@@ -80,7 +80,7 @@ describe('Matcher', () => {
       expect(result.matches.length).toBe(0);
     });
 
-    it('should respect maxPosts limit', () => {
+    it('should respect maxMatchedPosts limit', () => {
       const posts = Array.from({ length: 50 }, (_, i) =>
         createTestPost({
           id: `post-${i}`,
@@ -91,10 +91,9 @@ describe('Matcher', () => {
       const keywords = ['technology', 'innovation'];
       const preferences: MatchingPreferences = {
         ...DEFAULT_MATCHING_PREFERENCES,
-        maxPosts: 10,
       };
 
-      const result = matchPosts(posts, keywords, preferences);
+      const result = matchPosts(posts, keywords, preferences, 10);
 
       expect(result.matches.length).toBeLessThanOrEqual(10);
     });
@@ -257,7 +256,7 @@ describe('Matcher', () => {
       expect(merged.some((m) => m.post.id === 'post-2')).toBe(true);
     });
 
-    it('should respect maxPosts limit', () => {
+    it('should respect maxMatchedPosts limit', () => {
       const existing = Array.from({ length: 50 }, (_, i) =>
         createTestMatch({
           post: createTestPost({ id: `existing-${i}` }),

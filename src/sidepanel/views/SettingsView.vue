@@ -10,12 +10,13 @@ const {
   rssFeedUrl,
   selectedModel,
   threshold,
-  maxPosts,
   cacheTtlMinutes,
+  maxMatchedPosts,
   exampleComments,
   communicationPreferences,
   blogContentCharLimit,
   postContentCharLimit,
+  maxQueueSize,
 
   // UI state
   isLoading,
@@ -42,7 +43,7 @@ const {
 
   // Constants
   cacheTtlOptions,
-  maxPostsOptions,
+  maxMatchedPostsOptions,
   blogContentCharLimitOptions,
   postContentCharLimitOptions,
 
@@ -207,6 +208,18 @@ const {
                 </span>
                 <span v-else>Test Connection</span>
               </button>
+
+              <!-- Cache TTL dropdown -->
+              <div>
+                <label class="mb-1 block text-xs text-gray-500"> Cache Duration </label>
+                <select
+                  v-model.number="cacheTtlMinutes"
+                  class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option v-for="option in cacheTtlOptions" :key="option" :value="option">{{ option }} minutes</option>
+                </select>
+                <p class="mt-1 text-xs text-gray-500">How long to cache the RSS feed before refreshing.</p>
+              </div>
             </div>
           </section>
 
@@ -250,27 +263,33 @@ const {
                 <p class="mt-1 text-xs text-gray-500">Posts below this score will be filtered out.</p>
               </div>
 
-              <!-- Max posts dropdown -->
+              <!-- Max Queue Size input -->
               <div>
-                <label class="mb-1 block text-xs text-gray-500"> Max Posts to Show </label>
-                <select
-                  v-model.number="maxPosts"
+                <label class="mb-1 block text-xs text-gray-500"> Max Queue Size </label>
+                <input
+                  v-model.number="maxQueueSize"
+                  type="number"
+                  min="5"
+                  max="100"
                   class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option v-for="option in maxPostsOptions" :key="option" :value="option">{{ option }} posts</option>
-                </select>
+                />
+                <p class="mt-1 text-xs text-gray-500">
+                  Maximum posts to queue while browsing. Prevents overload from long browsing sessions.
+                </p>
               </div>
 
-              <!-- Cache TTL dropdown -->
+              <!-- Max Matched Posts dropdown -->
               <div>
-                <label class="mb-1 block text-xs text-gray-500"> RSS Cache Duration </label>
+                <label class="mb-1 block text-xs text-gray-500"> Max Matched Posts </label>
                 <select
-                  v-model.number="cacheTtlMinutes"
+                  v-model.number="maxMatchedPosts"
                   class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
-                  <option v-for="option in cacheTtlOptions" :key="option" :value="option">{{ option }} minutes</option>
+                  <option v-for="option in maxMatchedPostsOptions" :key="option" :value="option">
+                    {{ option }} posts
+                  </option>
                 </select>
-                <p class="mt-1 text-xs text-gray-500">How long to cache the RSS feed before refreshing.</p>
+                <p class="mt-1 text-xs text-gray-500">Maximum matched posts to keep after AI analysis.</p>
               </div>
 
               <!-- Blog Content Char Limit dropdown -->

@@ -5,7 +5,7 @@
 
 import { ref, shallowRef, computed, onMounted, onUnmounted, triggerRef } from 'vue';
 import type { MatchedPostWithScore, CachedRssFeed, ExtractedPostRecord } from '@shared/types';
-import { MAX_MATCHED_POSTS, STORAGE_KEYS } from '@shared/constants';
+import { STORAGE_KEYS, DEFAULT_MAX_QUEUE_SIZE, DEFAULT_MAX_MATCHED_POSTS } from '@shared/constants';
 import {
   getMatchedPostsWithScore,
   saveMatchedPostsWithScore,
@@ -30,6 +30,8 @@ export function usePosts() {
   const error = ref<string | null>(null);
   const currentFilter = ref<PostFilter>('queued');
   const lastRefreshedAt = ref<number | null>(null);
+  const maxQueueSize = ref(DEFAULT_MAX_QUEUE_SIZE);
+  const maxMatchedPosts = ref(DEFAULT_MAX_MATCHED_POSTS);
 
   // Storage change listener reference for cleanup
   let storageListener: ((changes: { [key: string]: chrome.storage.StorageChange }) => void) | null = null;
@@ -83,6 +85,9 @@ export function usePosts() {
 
   const totalMatches = computed(() => matchedPosts.value.length);
 
+  // Check if queue is at its configured limit
+  const isQueueAtLimit = computed(() => queuedCount.value >= maxQueueSize.value);
+
   const hasRssFeed = computed(() => cachedFeed.value !== null);
 
   const rssFeedStatus = computed(() => {
@@ -111,17 +116,19 @@ export function usePosts() {
     error.value = null;
 
     try {
-      // Load matched posts - limit to MAX_MATCHED_POSTS for performance
+      // Load config first for maxMatchedPosts limit
+      const config = await getConfig();
+      maxQueueSize.value = config.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE;
+      maxMatchedPosts.value = config.maxMatchedPosts ?? DEFAULT_MAX_MATCHED_POSTS;
+
+      // Load matched posts - limit to configured maxMatchedPosts for performance
       const posts = await getMatchedPostsWithScore();
-      matchedPosts.value = posts.slice(0, MAX_MATCHED_POSTS);
+      matchedPosts.value = posts.slice(0, maxMatchedPosts.value);
       triggerRef(matchedPosts);
 
       // Load cached feed status
       cachedFeed.value = await getCachedRssFeed();
       triggerRef(cachedFeed);
-
-      // Auto-refresh RSS feed if cache is missing/expired but URL is configured
-      const config = await getConfig();
       if (config.rssFeedUrl && (!cachedFeed.value || !isCachedFeedValid(cachedFeed.value))) {
         // Refresh in background without blocking
         sendMessage({ type: 'FETCH_RSS', url: '' })
@@ -171,7 +178,7 @@ export function usePosts() {
       // Update matched posts when they change
       if (changes[STORAGE_KEYS.MATCHED_POSTS_WITH_SCORE]) {
         const newValue = changes[STORAGE_KEYS.MATCHED_POSTS_WITH_SCORE].newValue as MatchedPostWithScore[] | undefined;
-        matchedPosts.value = (newValue ?? []).slice(0, MAX_MATCHED_POSTS);
+        matchedPosts.value = (newValue ?? []).slice(0, maxMatchedPosts.value);
         triggerRef(matchedPosts);
       }
 
@@ -191,6 +198,19 @@ export function usePosts() {
     };
 
     chrome.storage.local.onChanged.addListener(storageListener);
+
+    // Also listen for sync storage changes (config is stored in sync)
+    chrome.storage.sync.onChanged.addListener((changes) => {
+      if (changes[STORAGE_KEYS.CONFIG]) {
+        const newConfig = changes[STORAGE_KEYS.CONFIG].newValue;
+        if (newConfig?.maxQueueSize !== undefined) {
+          maxQueueSize.value = newConfig.maxQueueSize;
+        }
+        if (newConfig?.maxMatchedPosts !== undefined) {
+          maxMatchedPosts.value = newConfig.maxMatchedPosts;
+        }
+      }
+    });
   }
 
   /**
@@ -351,6 +371,8 @@ export function usePosts() {
     error,
     currentFilter,
     lastRefreshedAt,
+    maxQueueSize,
+    maxMatchedPosts,
 
     // Computed
     filteredMatchedPosts,
@@ -364,6 +386,7 @@ export function usePosts() {
     totalMatches,
     hasRssFeed,
     rssFeedStatus,
+    isQueueAtLimit,
 
     // Actions
     loadPosts,

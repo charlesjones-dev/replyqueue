@@ -24,11 +24,13 @@ import { sendMessage } from '@shared/messages';
 import {
   DEFAULT_MATCHING_PREFERENCES,
   CACHE_TTL_OPTIONS,
-  MAX_POSTS_OPTIONS,
+  MAX_MATCHED_POSTS_OPTIONS,
+  DEFAULT_MAX_MATCHED_POSTS,
   BLOG_CONTENT_CHAR_LIMIT_OPTIONS,
   DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
   POST_CONTENT_CHAR_LIMIT_OPTIONS,
   DEFAULT_POST_CONTENT_CHAR_LIMIT,
+  DEFAULT_MAX_QUEUE_SIZE,
 } from '@shared/constants';
 
 export function useSettingsView() {
@@ -40,13 +42,14 @@ export function useSettingsView() {
   const rssFeedUrl = ref('');
   const selectedModel = ref('');
   const threshold = ref(DEFAULT_MATCHING_PREFERENCES.threshold);
-  const maxPosts = ref(DEFAULT_MATCHING_PREFERENCES.maxPosts);
   const cacheTtlMinutes = ref(DEFAULT_MATCHING_PREFERENCES.cacheTtlMinutes);
+  const maxMatchedPosts = ref(DEFAULT_MAX_MATCHED_POSTS);
   const exampleComments = ref<string[]>([]);
   const newExampleComment = ref('');
   const communicationPreferences = ref('');
   const blogContentCharLimit = ref(DEFAULT_BLOG_CONTENT_CHAR_LIMIT);
   const postContentCharLimit = ref(DEFAULT_POST_CONTENT_CHAR_LIMIT);
+  const maxQueueSize = ref(DEFAULT_MAX_QUEUE_SIZE);
 
   // UI state
   const isLoading = ref(false);
@@ -77,12 +80,13 @@ export function useSettingsView() {
     rssFeedUrl: '',
     selectedModel: '',
     threshold: DEFAULT_MATCHING_PREFERENCES.threshold,
-    maxPosts: DEFAULT_MATCHING_PREFERENCES.maxPosts,
     cacheTtlMinutes: DEFAULT_MATCHING_PREFERENCES.cacheTtlMinutes,
+    maxMatchedPosts: DEFAULT_MAX_MATCHED_POSTS,
     exampleComments: [] as string[],
     communicationPreferences: '',
     blogContentCharLimit: DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
     postContentCharLimit: DEFAULT_POST_CONTENT_CHAR_LIMIT,
+    maxQueueSize: DEFAULT_MAX_QUEUE_SIZE,
   });
 
   // Computed values
@@ -119,12 +123,13 @@ export function useSettingsView() {
       rssFeedUrl,
       selectedModel,
       threshold,
-      maxPosts,
       cacheTtlMinutes,
+      maxMatchedPosts,
       exampleComments,
       communicationPreferences,
       blogContentCharLimit,
       postContentCharLimit,
+      maxQueueSize,
     ],
     () => {
       checkForChanges();
@@ -141,12 +146,13 @@ export function useSettingsView() {
       rssFeedUrl.value !== originalValues.value.rssFeedUrl ||
       selectedModel.value !== originalValues.value.selectedModel ||
       threshold.value !== originalValues.value.threshold ||
-      maxPosts.value !== originalValues.value.maxPosts ||
       cacheTtlMinutes.value !== originalValues.value.cacheTtlMinutes ||
+      maxMatchedPosts.value !== originalValues.value.maxMatchedPosts ||
       JSON.stringify(exampleComments.value) !== JSON.stringify(originalValues.value.exampleComments) ||
       communicationPreferences.value !== originalValues.value.communicationPreferences ||
       blogContentCharLimit.value !== originalValues.value.blogContentCharLimit ||
-      postContentCharLimit.value !== originalValues.value.postContentCharLimit;
+      postContentCharLimit.value !== originalValues.value.postContentCharLimit ||
+      maxQueueSize.value !== originalValues.value.maxQueueSize;
 
     hasUnsavedChanges.value = changed;
   }
@@ -166,11 +172,12 @@ export function useSettingsView() {
 
       const prefs = cfg.matchingPreferences ?? DEFAULT_MATCHING_PREFERENCES;
       threshold.value = prefs.threshold;
-      maxPosts.value = prefs.maxPosts;
       cacheTtlMinutes.value = prefs.cacheTtlMinutes;
+      maxMatchedPosts.value = cfg.maxMatchedPosts ?? DEFAULT_MAX_MATCHED_POSTS;
       communicationPreferences.value = cfg.communicationPreferences ?? '';
       blogContentCharLimit.value = cfg.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT;
       postContentCharLimit.value = cfg.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT;
+      maxQueueSize.value = cfg.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE;
 
       // Load example comments
       exampleComments.value = await getExampleComments();
@@ -184,12 +191,13 @@ export function useSettingsView() {
         rssFeedUrl: cfg.rssFeedUrl,
         selectedModel: cfg.selectedModel,
         threshold: prefs.threshold,
-        maxPosts: prefs.maxPosts,
         cacheTtlMinutes: prefs.cacheTtlMinutes,
+        maxMatchedPosts: cfg.maxMatchedPosts ?? DEFAULT_MAX_MATCHED_POSTS,
         exampleComments: [...exampleComments.value],
         communicationPreferences: cfg.communicationPreferences ?? '',
         blogContentCharLimit: cfg.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
         postContentCharLimit: cfg.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT,
+        maxQueueSize: cfg.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE,
       };
 
       hasUnsavedChanges.value = false;
@@ -262,7 +270,6 @@ export function useSettingsView() {
     try {
       const matchingPreferences: MatchingPreferences = {
         threshold: threshold.value,
-        maxPosts: maxPosts.value,
         cacheTtlMinutes: cacheTtlMinutes.value,
       };
 
@@ -274,6 +281,8 @@ export function useSettingsView() {
         communicationPreferences: communicationPreferences.value,
         blogContentCharLimit: blogContentCharLimit.value,
         postContentCharLimit: postContentCharLimit.value,
+        maxQueueSize: maxQueueSize.value,
+        maxMatchedPosts: maxMatchedPosts.value,
       });
 
       // Save example comments separately
@@ -301,12 +310,13 @@ export function useSettingsView() {
         rssFeedUrl: rssFeedUrl.value,
         selectedModel: selectedModel.value,
         threshold: threshold.value,
-        maxPosts: maxPosts.value,
         cacheTtlMinutes: cacheTtlMinutes.value,
+        maxMatchedPosts: maxMatchedPosts.value,
         exampleComments: [...exampleComments.value],
         communicationPreferences: communicationPreferences.value,
         blogContentCharLimit: blogContentCharLimit.value,
         postContentCharLimit: postContentCharLimit.value,
+        maxQueueSize: maxQueueSize.value,
       };
 
       hasUnsavedChanges.value = false;
@@ -328,12 +338,13 @@ export function useSettingsView() {
     rssFeedUrl.value = originalValues.value.rssFeedUrl;
     selectedModel.value = originalValues.value.selectedModel;
     threshold.value = originalValues.value.threshold;
-    maxPosts.value = originalValues.value.maxPosts;
     cacheTtlMinutes.value = originalValues.value.cacheTtlMinutes;
+    maxMatchedPosts.value = originalValues.value.maxMatchedPosts;
     exampleComments.value = [...originalValues.value.exampleComments];
     communicationPreferences.value = originalValues.value.communicationPreferences;
     blogContentCharLimit.value = originalValues.value.blogContentCharLimit;
     postContentCharLimit.value = originalValues.value.postContentCharLimit;
+    maxQueueSize.value = originalValues.value.maxQueueSize;
 
     // Clear validation state
     apiKeyError.value = null;
@@ -428,13 +439,14 @@ export function useSettingsView() {
     rssFeedUrl,
     selectedModel,
     threshold,
-    maxPosts,
     cacheTtlMinutes,
+    maxMatchedPosts,
     exampleComments,
     newExampleComment,
     communicationPreferences,
     blogContentCharLimit,
     postContentCharLimit,
+    maxQueueSize,
 
     // UI state
     isLoading,
@@ -462,7 +474,7 @@ export function useSettingsView() {
 
     // Constants for UI
     cacheTtlOptions: CACHE_TTL_OPTIONS,
-    maxPostsOptions: MAX_POSTS_OPTIONS,
+    maxMatchedPostsOptions: MAX_MATCHED_POSTS_OPTIONS,
     blogContentCharLimitOptions: BLOG_CONTENT_CHAR_LIMIT_OPTIONS,
     postContentCharLimitOptions: POST_CONTENT_CHAR_LIMIT_OPTIONS,
 

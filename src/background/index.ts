@@ -29,9 +29,11 @@ import {
   saveCachedRssFeed,
   isCachedFeedValid,
   addEvaluatedPostIds,
+  getEvaluatedPostIds,
 } from '../shared/storage';
 import {
   DEFAULT_MATCHING_PREFERENCES,
+  DEFAULT_MAX_MATCHED_POSTS,
   DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
   DEFAULT_POST_CONTENT_CHAR_LIMIT,
 } from '../shared/constants';
@@ -344,7 +346,33 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
 
     if (!cachedFeed || cachedFeed.url !== config.rssFeedUrl || !isCachedFeedValid(cachedFeed)) {
       console.log(`${LOG_PREFIX} Fetching fresh RSS feed for AI matching`);
-      feed = await fetchRssFeed(config.rssFeedUrl);
+
+      // Check if we have permission before fetching
+      const origin = getOriginPattern(config.rssFeedUrl);
+      const hasPermission = await chrome.permissions.contains({ origins: [origin] });
+
+      if (!hasPermission) {
+        console.log(`${LOG_PREFIX} Missing permission for ${origin}`);
+        return {
+          success: false,
+          error: 'RSS_PERMISSION_REQUIRED',
+        };
+      }
+
+      try {
+        feed = await fetchRssFeed(config.rssFeedUrl);
+      } catch (fetchError) {
+        // Check if this is a CORS/network error that might be permission-related
+        const errorMsg = fetchError instanceof Error ? fetchError.message : String(fetchError);
+        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError') || errorMsg.includes('CORS')) {
+          console.log(`${LOG_PREFIX} Fetch failed, may be permission issue: ${errorMsg}`);
+          return {
+            success: false,
+            error: 'RSS_PERMISSION_REQUIRED',
+          };
+        }
+        throw fetchError;
+      }
 
       const newCache: CachedRssFeed = {
         feed,
@@ -362,9 +390,16 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
       return { success: false, error: 'Failed to load RSS feed' };
     }
 
-    // Get extracted posts
-    const extractedPosts = await getExtractedPosts();
-    console.log(`${LOG_PREFIX} AI matching ${extractedPosts.length} extracted posts`);
+    // Get extracted posts and filter to only queued posts (not yet evaluated)
+    const allExtractedPosts = await getExtractedPosts();
+    const alreadyEvaluatedIds = await getEvaluatedPostIds();
+    const extractedPosts = allExtractedPosts.filter((p) => {
+      const key = `${p.platform}:${p.id}`;
+      return !alreadyEvaluatedIds.has(key);
+    });
+    console.log(
+      `${LOG_PREFIX} AI matching ${extractedPosts.length} queued posts (${allExtractedPosts.length} total, ${alreadyEvaluatedIds.size} already evaluated)`
+    );
 
     if (extractedPosts.length === 0) {
       return {
@@ -388,6 +423,9 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
     const blogContentCharLimit = config.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT;
     const postContentCharLimit = config.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT;
 
+    // Get max matched posts from config
+    const maxMatchedPosts = config.maxMatchedPosts ?? DEFAULT_MAX_MATCHED_POSTS;
+
     // Perform AI matching
     const matchResult = await aiMatchPosts(
       extractedPosts,
@@ -397,6 +435,7 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
       config.selectedModel,
       exampleComments,
       preferences,
+      maxMatchedPosts,
       config.communicationPreferences ?? '',
       blogContentCharLimit,
       postContentCharLimit
@@ -411,7 +450,7 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
     const existingMatches = await getMatchedPostsWithScore();
 
     // Merge new matches with existing ones
-    const mergedMatches = mergeMatches(existingMatches, matchResult.matches, preferences.maxPosts);
+    const mergedMatches = mergeMatches(existingMatches, matchResult.matches, maxMatchedPosts);
 
     // Save merged matches
     await saveMatchedPostsWithScore(mergedMatches);
@@ -614,6 +653,86 @@ async function handleHeatCheckPosts(): Promise<MessageResponse> {
 }
 
 /**
+ * Extract origin pattern from URL for permission requests
+ */
+function getOriginPattern(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}/*`;
+  } catch {
+    throw new Error('Invalid URL');
+  }
+}
+
+/**
+ * Handle CHECK_HOST_PERMISSION message
+ * Checks if we have permission to access a URL's origin
+ */
+async function handleCheckHostPermission(
+  message: ExtensionMessage
+): Promise<MessageResponse<{ hasPermission: boolean }>> {
+  const { url } = message as { url: string };
+
+  if (!url) {
+    return { success: false, error: 'URL is required' };
+  }
+
+  try {
+    const origin = getOriginPattern(url);
+    const hasPermission = await chrome.permissions.contains({
+      origins: [origin],
+    });
+
+    console.log(`${LOG_PREFIX} Permission check for ${origin}: ${hasPermission}`);
+
+    return { success: true, data: { hasPermission } };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Handle REQUEST_HOST_PERMISSION message
+ * Requests permission to access a URL's origin
+ */
+async function handleRequestHostPermission(message: ExtensionMessage): Promise<MessageResponse<{ granted: boolean }>> {
+  const { url } = message as { url: string };
+
+  if (!url) {
+    return { success: false, error: 'URL is required' };
+  }
+
+  try {
+    const origin = getOriginPattern(url);
+
+    // First check if we already have the permission
+    const alreadyHas = await chrome.permissions.contains({
+      origins: [origin],
+    });
+
+    if (alreadyHas) {
+      console.log(`${LOG_PREFIX} Already have permission for ${origin}`);
+      return { success: true, data: { granted: true } };
+    }
+
+    // Request the permission
+    console.log(`${LOG_PREFIX} Requesting permission for ${origin}`);
+    const granted = await chrome.permissions.request({
+      origins: [origin],
+    });
+
+    console.log(`${LOG_PREFIX} Permission ${granted ? 'granted' : 'denied'} for ${origin}`);
+
+    return { success: true, data: { granted } };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`${LOG_PREFIX} Error requesting permission:`, error);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
  * Main message handler
  */
 chrome.runtime.onMessage.addListener(
@@ -664,6 +783,12 @@ chrome.runtime.onMessage.addListener(
 
         case 'HEAT_CHECK_POSTS':
           return handleHeatCheckPosts();
+
+        case 'CHECK_HOST_PERMISSION':
+          return handleCheckHostPermission(message);
+
+        case 'REQUEST_HOST_PERMISSION':
+          return handleRequestHostPermission(message);
 
         default:
           console.log(`${LOG_PREFIX} Unhandled message type: ${message.type}`);

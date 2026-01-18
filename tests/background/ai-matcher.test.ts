@@ -85,7 +85,7 @@ describe('AI Matcher', () => {
       expect(result.matches.length).toBe(0);
     });
 
-    it('should respect maxPosts limit', () => {
+    it('should respect maxMatchedPosts limit', () => {
       const posts = Array.from({ length: 50 }, (_, i) =>
         createTestPost({
           id: `post-${i}`,
@@ -94,10 +94,7 @@ describe('AI Matcher', () => {
       );
 
       const keywords = ['technology', 'software'];
-      const result = matchPosts(posts, keywords, {
-        ...DEFAULT_MATCHING_PREFERENCES,
-        maxPosts: 10,
-      });
+      const result = matchPosts(posts, keywords, DEFAULT_MATCHING_PREFERENCES, 10);
 
       expect(result.matches.length).toBeLessThanOrEqual(10);
     });
@@ -214,7 +211,7 @@ describe('AI Matcher', () => {
       expect(merged.some((m) => m.post.id === 'post-2')).toBe(true);
     });
 
-    it('should respect maxPosts limit', () => {
+    it('should respect maxMatchedPosts limit', () => {
       const existing = Array.from({ length: 50 }, (_, i) => ({
         post: createTestPost({ id: `existing-${i}` }),
         score: 0.5,

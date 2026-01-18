@@ -14,9 +14,10 @@ import {
   STORAGE_KEYS,
   DEFAULT_CONFIG,
   MAX_EXTRACTED_POSTS,
-  MAX_MATCHED_POSTS,
+  DEFAULT_MAX_MATCHED_POSTS,
   MAX_EXAMPLE_COMMENTS,
   SYNC_STORAGE_ITEM_LIMIT,
+  DEFAULT_MAX_QUEUE_SIZE,
 } from './constants';
 
 /**
@@ -171,26 +172,43 @@ export async function saveExtractedPosts(posts: ExtractedPostRecord[]): Promise<
 }
 
 /**
- * Add new extracted posts with deduplication
- * Returns the count of new posts added and duplicates skipped
+ * Add new extracted posts with deduplication and queue size limit
+ * Returns the count of new posts added, duplicates skipped, and whether limit was reached
  */
 export async function addExtractedPosts(
   newPosts: ExtractedPostRecord[]
-): Promise<{ added: number; duplicates: number; total: number }> {
+): Promise<{ added: number; duplicates: number; total: number; limitReached: boolean }> {
   const existing = await getExtractedPosts();
   const existingIds = new Set(existing.map((p) => `${p.platform}:${p.id}`));
 
+  // Get config for maxQueueSize and evaluated posts to calculate current queue size
+  const config = await getConfig();
+  const maxQueueSize = config.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE;
+  const evaluatedIds = await getEvaluatedPostIds();
+
+  // Calculate current queue size (extracted posts not yet evaluated)
+  const currentQueueSize = existing.filter((p) => {
+    const key = `${p.platform}:${p.id}`;
+    return !evaluatedIds.has(key);
+  }).length;
+
+  const remainingCapacity = Math.max(0, maxQueueSize - currentQueueSize);
+
   let added = 0;
   let duplicates = 0;
+  let limitReached = remainingCapacity === 0;
 
   for (const post of newPosts) {
     const key = `${post.platform}:${post.id}`;
     if (existingIds.has(key)) {
       duplicates++;
-    } else {
+    } else if (added < remainingCapacity) {
       existing.push(post);
       existingIds.add(key);
       added++;
+    } else {
+      // Queue limit reached, stop adding
+      limitReached = true;
     }
   }
 
@@ -203,7 +221,33 @@ export async function addExtractedPosts(
 
   await saveExtractedPosts(existing);
 
-  return { added, duplicates, total: existing.length };
+  return { added, duplicates, total: existing.length, limitReached };
+}
+
+/**
+ * Get current queue status (for UI to display limit warnings)
+ */
+export async function getQueueStatus(): Promise<{
+  currentSize: number;
+  maxSize: number;
+  isAtLimit: boolean;
+}> {
+  const config = await getConfig();
+  const maxQueueSize = config.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE;
+  const existing = await getExtractedPosts();
+  const evaluatedIds = await getEvaluatedPostIds();
+
+  // Calculate current queue size (extracted posts not yet evaluated)
+  const currentSize = existing.filter((p) => {
+    const key = `${p.platform}:${p.id}`;
+    return !evaluatedIds.has(key);
+  }).length;
+
+  return {
+    currentSize,
+    maxSize: maxQueueSize,
+    isAtLimit: currentSize >= maxQueueSize,
+  };
 }
 
 /**
@@ -266,9 +310,13 @@ export async function getMatchedPostsWithScore(): Promise<MatchedPostWithScore[]
  * Save matched posts with scores to local storage
  */
 export async function saveMatchedPostsWithScore(posts: MatchedPostWithScore[]): Promise<void> {
+  // Get max matched posts from config
+  const config = await getConfig();
+  const maxMatchedPosts = config.maxMatchedPosts ?? DEFAULT_MAX_MATCHED_POSTS;
+
   // Limit to max size, keeping highest scores
   const sorted = [...posts].sort((a, b) => b.score - a.score);
-  const limited = sorted.slice(0, MAX_MATCHED_POSTS);
+  const limited = sorted.slice(0, maxMatchedPosts);
   await setLocal(STORAGE_KEYS.MATCHED_POSTS_WITH_SCORE, limited);
 }
 
@@ -521,6 +569,7 @@ export const storage = {
   saveExtractedPosts,
   addExtractedPosts,
   clearExtractedPosts,
+  getQueueStatus,
   clearAllData,
   clearAllCaches,
   getAllData,

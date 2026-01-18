@@ -7,6 +7,48 @@ const config = ref<ExtensionConfig>({ ...DEFAULT_CONFIG });
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 
+/**
+ * Extract origin pattern from URL for permission requests
+ */
+function getOriginPattern(url: string): string {
+  const parsed = new URL(url);
+  return `${parsed.protocol}//${parsed.host}/*`;
+}
+
+/**
+ * Check if we have permission to access a URL's origin
+ */
+async function hasHostPermission(url: string): Promise<boolean> {
+  try {
+    const origin = getOriginPattern(url);
+    return await chrome.permissions.contains({ origins: [origin] });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Request permission to access a URL's origin
+ * Must be called from a user gesture context (e.g., click handler)
+ */
+async function requestHostPermission(url: string): Promise<boolean> {
+  try {
+    const origin = getOriginPattern(url);
+
+    // Check if we already have permission
+    const alreadyHas = await chrome.permissions.contains({ origins: [origin] });
+    if (alreadyHas) {
+      return true;
+    }
+
+    // Request permission - this will show Chrome's permission prompt
+    return await chrome.permissions.request({ origins: [origin] });
+  } catch (e) {
+    console.error('[useConfig] Failed to request permission:', e);
+    return false;
+  }
+}
+
 export function useConfig() {
   /**
    * Load configuration from storage
@@ -67,9 +109,39 @@ export function useConfig() {
 
   /**
    * Update RSS feed URL
+   * Automatically requests host permission if needed
+   * @throws Error if permission is denied
    */
   async function setRssFeedUrl(rssFeedUrl: string): Promise<void> {
+    if (rssFeedUrl) {
+      // Request permission for this URL's origin
+      const granted = await requestHostPermission(rssFeedUrl);
+      if (!granted) {
+        throw new Error('Permission denied: Cannot access RSS feed URL. Please grant permission to fetch the feed.');
+      }
+    }
     await update({ rssFeedUrl });
+  }
+
+  /**
+   * Check if we have permission to access the current RSS feed URL
+   */
+  async function checkRssFeedPermission(): Promise<boolean> {
+    if (!config.value.rssFeedUrl) {
+      return true; // No URL configured, so no permission needed
+    }
+    return hasHostPermission(config.value.rssFeedUrl);
+  }
+
+  /**
+   * Request permission for the current RSS feed URL
+   * Must be called from a user gesture context
+   */
+  async function requestRssFeedPermission(): Promise<boolean> {
+    if (!config.value.rssFeedUrl) {
+      return true;
+    }
+    return requestHostPermission(config.value.rssFeedUrl);
   }
 
   /**
@@ -97,5 +169,7 @@ export function useConfig() {
     setRssFeedUrl,
     setSelectedModel,
     markSetupComplete,
+    checkRssFeedPermission,
+    requestRssFeedPermission,
   };
 }

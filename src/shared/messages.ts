@@ -26,7 +26,10 @@ export type MessageType =
   | 'AI_MATCH_POSTS'
   | 'GENERATE_SUGGESTIONS'
   | 'REGENERATE_SUGGESTIONS'
-  | 'HEAT_CHECK_POSTS';
+  | 'HEAT_CHECK_POSTS'
+  // Permission messages
+  | 'REQUEST_HOST_PERMISSION'
+  | 'CHECK_HOST_PERMISSION';
 
 export interface BaseMessage {
   type: MessageType;
@@ -173,6 +176,26 @@ export interface HeatCheckPostsMessage extends BaseMessage {
 }
 
 // ============================================================
+// Permission messages
+// ============================================================
+
+/**
+ * Request host permission for a URL (e.g., RSS feed URL)
+ */
+export interface RequestHostPermissionMessage extends BaseMessage {
+  type: 'REQUEST_HOST_PERMISSION';
+  url: string;
+}
+
+/**
+ * Check if we have host permission for a URL
+ */
+export interface CheckHostPermissionMessage extends BaseMessage {
+  type: 'CHECK_HOST_PERMISSION';
+  url: string;
+}
+
+// ============================================================
 // Union types
 // ============================================================
 
@@ -194,7 +217,9 @@ export type ExtensionMessage =
   | AIMatchPostsMessage
   | GenerateSuggestionsMessage
   | RegenerateSuggestionsMessage
-  | HeatCheckPostsMessage;
+  | HeatCheckPostsMessage
+  | RequestHostPermissionMessage
+  | CheckHostPermissionMessage;
 
 // ============================================================
 // Response types

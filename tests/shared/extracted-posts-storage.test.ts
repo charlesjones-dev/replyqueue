@@ -164,6 +164,24 @@ describe('Extracted Posts Storage', () => {
       // Extracted posts use local storage
       setMockStorage({ [STORAGE_KEYS.EXTRACTED_POSTS]: existingPosts }, 'local');
 
+      // Mark all existing posts as evaluated (so they don't count against queue limit)
+      const evaluatedIds = existingPosts.map((p) => `${p.platform}:${p.id}`);
+      setMockStorage({ [STORAGE_KEYS.EVALUATED_POST_IDS]: evaluatedIds }, 'local');
+
+      // Set a config with high maxQueueSize to allow adding
+      setMockStorage(
+        {
+          [STORAGE_KEYS.CONFIG]: {
+            maxQueueSize: 100,
+            apiKey: '',
+            rssFeedUrl: '',
+            selectedModel: '',
+            isSetupComplete: false,
+          },
+        },
+        'sync'
+      );
+
       // Add one more post (newest)
       const newPost: ExtractedPostRecord = {
         id: 'newest',

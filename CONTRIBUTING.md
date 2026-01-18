@@ -18,7 +18,7 @@ Thank you for your interest in contributing to ReplyQueue! This document provide
 ### Prerequisites
 
 - Node.js 18 or higher
-- npm 9 or higher
+- pnpm 9 or higher
 - Chrome browser (for testing the extension)
 - Git
 
@@ -32,12 +32,12 @@ Thank you for your interest in contributing to ReplyQueue! This document provide
 
 2. **Install dependencies**
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. **Start the development server**
    ```bash
-   npm run dev
+   pnpm dev
    ```
 
 4. **Load the extension in Chrome**
@@ -48,7 +48,7 @@ Thank you for your interest in contributing to ReplyQueue! This document provide
 
 5. **Run tests**
    ```bash
-   npm test
+   pnpm test
    ```
 
 ### Project Structure
@@ -214,12 +214,12 @@ Use descriptive branch names:
 
 3. **Run tests**
    ```bash
-   npm test
+   pnpm test
    ```
 
 4. **Build the extension**
    ```bash
-   npm run build
+   pnpm build
    ```
 
 5. **Test manually**
@@ -387,13 +387,13 @@ describe('TwitterAdapter', () => {
 
 ```bash
 # Run all tests
-npm test
+pnpm test
 
 # Run tests in watch mode
-npm run test:watch
+pnpm test:watch
 
 # Run specific test file
-npm test -- tests/shared/validation.test.ts
+pnpm test tests/shared/validation.test.ts
 ```
 
 ### Test Structure

@@ -17,6 +17,7 @@ import type {
 } from '../shared/types';
 import {
   DEFAULT_MATCHING_PREFERENCES,
+  DEFAULT_MAX_MATCHED_POSTS,
   DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
   DEFAULT_POST_CONTENT_CHAR_LIMIT,
   MAX_STYLE_EXAMPLES_IN_PROMPT,
@@ -137,12 +138,13 @@ function generateMatchReason(matchedKeywords: string[]): string {
 export function matchPosts(
   posts: ExtractedPostRecord[],
   keywords: string[],
-  preferences: MatchingPreferences = DEFAULT_MATCHING_PREFERENCES
+  preferences: MatchingPreferences = DEFAULT_MATCHING_PREFERENCES,
+  maxMatchedPosts: number = DEFAULT_MAX_MATCHED_POSTS
 ): MatchResult {
   const startTime = Date.now();
 
   console.log(`${LOG_PREFIX} Matching ${posts.length} posts against ${keywords.length} keywords`);
-  console.log(`${LOG_PREFIX} Preferences: threshold=${preferences.threshold}, maxPosts=${preferences.maxPosts}`);
+  console.log(`${LOG_PREFIX} Preferences: threshold=${preferences.threshold}, maxMatchedPosts=${maxMatchedPosts}`);
 
   const matches: MatchedPostWithScore[] = [];
 
@@ -164,8 +166,8 @@ export function matchPosts(
   // Sort by score descending
   matches.sort((a, b) => b.score - a.score);
 
-  // Limit to maxPosts
-  const limitedMatches = matches.slice(0, preferences.maxPosts);
+  // Limit to maxMatchedPosts
+  const limitedMatches = matches.slice(0, maxMatchedPosts);
 
   const processingTimeMs = Date.now() - startTime;
 
@@ -188,7 +190,8 @@ export function matchPosts(
 export function rescoreMatches(
   existingMatches: MatchedPostWithScore[],
   keywords: string[],
-  preferences: MatchingPreferences = DEFAULT_MATCHING_PREFERENCES
+  preferences: MatchingPreferences = DEFAULT_MATCHING_PREFERENCES,
+  maxMatchedPosts: number = DEFAULT_MAX_MATCHED_POSTS
 ): MatchResult {
   const startTime = Date.now();
 
@@ -214,8 +217,8 @@ export function rescoreMatches(
   // Sort by score descending
   updatedMatches.sort((a, b) => b.score - a.score);
 
-  // Limit to maxPosts
-  const limitedMatches = updatedMatches.slice(0, preferences.maxPosts);
+  // Limit to maxMatchedPosts
+  const limitedMatches = updatedMatches.slice(0, maxMatchedPosts);
 
   const processingTimeMs = Date.now() - startTime;
 
@@ -234,7 +237,7 @@ export function rescoreMatches(
 export function mergeMatches(
   existingMatches: MatchedPostWithScore[],
   newMatches: MatchedPostWithScore[],
-  maxPosts: number = DEFAULT_MATCHING_PREFERENCES.maxPosts
+  maxMatchedPosts: number = DEFAULT_MAX_MATCHED_POSTS
 ): MatchedPostWithScore[] {
   // Create a map of existing matches by post ID
   const existingMap = new Map<string, MatchedPostWithScore>();
@@ -273,7 +276,7 @@ export function mergeMatches(
   // Sort by score descending
   merged.sort((a, b) => b.score - a.score);
 
-  return merged.slice(0, maxPosts);
+  return merged.slice(0, maxMatchedPosts);
 }
 
 /**
@@ -460,22 +463,31 @@ function buildMatchingPrompt(
   const styleExamples = exampleComments.slice(0, MAX_STYLE_EXAMPLES_IN_PROMPT);
   const styleSection =
     styleExamples.length > 0
-      ? `\n\nWriting Style Examples (match this tone and style):\n${styleExamples.map((ex, i) => `${i + 1}. "${ex}"`).join('\n')}`
+      ? `\n<writing_style_examples>
+Match this tone and style:
+${styleExamples.map((ex, i) => `${i + 1}. "${ex}"`).join('\n')}
+</writing_style_examples>`
       : '';
 
   const commPrefsSection = communicationPreferences.trim()
-    ? `\n\nCommunication Rules (MUST follow):\n${communicationPreferences.trim()}`
+    ? `\n<communication_rules_must_follow>
+${communicationPreferences.trim()}
+</communication_rules_must_follow>`
     : '';
 
   return `You are evaluating social media posts to find opportunities to share relevant blog content and engage with the community.
 
+<blog_context>
 Blog: "${feedTitle}"
 URL: ${blogUrl}
+</blog_context>
 
-Recent Blog Posts:
+<recent_blog_posts>
 ${blogSummary}
+</recent_blog_posts>
 ${styleSection}${commPrefsSection}
 
+<instructions>
 Analyze each post below and determine if it's a good opportunity to share insights from the blog. Consider:
 - Topic relevance to the blog content
 - Whether the author seems open to engagement
@@ -485,10 +497,13 @@ For each matching post, provide:
 1. A relevance score (0.0 to 1.0)
 2. A brief reason why this is a good match
 3. ${REPLY_SUGGESTIONS_COUNT} reply suggestions that naturally reference a specific blog post URL from the list above (use the specific post URL that is most relevant, not the generic blog URL)
+</instructions>
 
-Posts to evaluate:
+<posts_to_evaluate>
 ${JSON.stringify(postsJson, null, 2)}
+</posts_to_evaluate>
 
+<response_format>
 Respond with valid JSON in this exact format:
 {
   "results": [
@@ -505,7 +520,8 @@ Respond with valid JSON in this exact format:
   ]
 }
 
-Only include posts with score >= 0.3. Return empty results array if no posts match.`;
+Only include posts with score >= 0.3. Return empty results array if no posts match.
+</response_format>`;
 }
 
 /**
@@ -550,6 +566,7 @@ export async function aiMatchPosts(
   model: string,
   exampleComments: string[] = [],
   preferences: MatchingPreferences = DEFAULT_MATCHING_PREFERENCES,
+  maxMatchedPosts: number = DEFAULT_MAX_MATCHED_POSTS,
   communicationPreferences: string = '',
   blogContentCharLimit: number = DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
   postContentCharLimit: number = DEFAULT_POST_CONTENT_CHAR_LIMIT
@@ -677,8 +694,8 @@ export async function aiMatchPosts(
   // Sort by score descending
   matches.sort((a, b) => b.score - a.score);
 
-  // Limit to maxPosts
-  const limitedMatches = matches.slice(0, preferences.maxPosts);
+  // Limit to maxMatchedPosts
+  const limitedMatches = matches.slice(0, maxMatchedPosts);
 
   const processingTimeMs = Date.now() - startTime;
 
@@ -715,32 +732,43 @@ export async function generateReplySuggestions(
   const styleExamples = exampleComments.slice(0, MAX_STYLE_EXAMPLES_IN_PROMPT);
   const styleSection =
     styleExamples.length > 0
-      ? `\n\nWrite replies in this style:\n${styleExamples.map((ex, i) => `${i + 1}. "${ex}"`).join('\n')}`
+      ? `\n<writing_style_examples>
+Write replies in this style:
+${styleExamples.map((ex, i) => `${i + 1}. "${ex}"`).join('\n')}
+</writing_style_examples>`
       : '';
 
   const commPrefsSection = communicationPreferences.trim()
-    ? `\n\nCommunication Rules (MUST follow):\n${communicationPreferences.trim()}`
+    ? `\n<communication_rules_must_follow>
+${communicationPreferences.trim()}
+</communication_rules_must_follow>`
     : '';
 
   const prompt = `Generate ${REPLY_SUGGESTIONS_COUNT} engaging reply suggestions for this social media post. The replies should naturally reference insights from the blog.
 
+<blog_context>
 Blog: "${feed.title}"
 URL: ${blogUrl}
+</blog_context>
 
-Recent Blog Posts:
+<recent_blog_posts>
 ${blogSummary}
+</recent_blog_posts>
 ${styleSection}${commPrefsSection}
 
-Post to reply to:
+<post_to_reply_to>
 Author: ${post.authorName}
 Content: ${post.content}
+</post_to_reply_to>
 
-Requirements:
+<requirements>
 - Each reply should be helpful and add value
 - Include a link to the most relevant specific blog post URL from the list above (not the generic blog homepage)
 - Be conversational and authentic, not salesy
 - Keep replies concise (under 280 characters if possible)
+</requirements>
 
+<response_format>
 Respond with valid JSON:
 {
   "suggestions": [
@@ -748,7 +776,8 @@ Respond with valid JSON:
     "Reply suggestion 2",
     "Reply suggestion 3"
   ]
-}`;
+}
+</response_format>`;
 
   try {
     const response = await chatCompletion(apiKey, {
@@ -846,20 +875,27 @@ function cacheHeatCheck(postId: string, platform: string, result: HeatCheckResul
  * Build the heat check prompt for analyzing post tone/sentiment
  */
 function buildHeatCheckPrompt(posts: { id: string; content: string; author: string }[]): string {
-  return `Analyze the tone and sentiment of these social media posts. Classify each post into one of these categories:
+  return `Analyze the tone and sentiment of these social media posts.
 
+<tone_categories>
+Classify each post into one of these categories:
 - positive: Uplifting, encouraging, celebratory, sharing wins or good news
 - educational: Informative, teaching, sharing knowledge or insights
 - question: Asking for help, advice, or opinions
 - negative: Complaining, venting, pessimistic, criticizing without constructive purpose
 - promotional: Self-promotion, selling products/services, marketing
 - neutral: General updates, observations, neither positive nor negative
+</tone_categories>
 
+<engagement_criteria>
 Also determine if each post is a good candidate for engagement. Posts that are positive, educational, or genuine questions are usually good candidates. Posts that are negative complaints or overly promotional are usually NOT good candidates.
+</engagement_criteria>
 
-Posts to analyze:
+<posts_to_analyze>
 ${JSON.stringify(posts, null, 2)}
+</posts_to_analyze>
 
+<response_format>
 Respond with valid JSON in this exact format:
 {
   "results": [
@@ -872,7 +908,8 @@ Respond with valid JSON in this exact format:
   ]
 }
 
-Include ALL posts in the results array.`;
+Include ALL posts in the results array.
+</response_format>`;
 }
 
 /**

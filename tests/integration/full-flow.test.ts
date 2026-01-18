@@ -149,15 +149,15 @@ describe('Full Flow Integration Tests', () => {
       await updateConfig({
         matchingPreferences: {
           threshold: 0.5,
-          maxPosts: 30,
           cacheTtlMinutes: 120,
         },
+        maxMatchedPosts: 150,
       });
 
       const updatedConfig = await getConfig();
       expect(updatedConfig.matchingPreferences?.threshold).toBe(0.5);
-      expect(updatedConfig.matchingPreferences?.maxPosts).toBe(30);
       expect(updatedConfig.matchingPreferences?.cacheTtlMinutes).toBe(120);
+      expect(updatedConfig.maxMatchedPosts).toBe(150);
     });
 
     it('should preserve other settings when updating specific fields', async () => {

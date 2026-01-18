@@ -13,7 +13,7 @@ import PostCardSkeleton from '../components/PostCardSkeleton.vue';
 import Toast from '../components/Toast.vue';
 
 const { openSettings, openSetup } = useAppState();
-const { config } = useConfig();
+const { config, requestRssFeedPermission } = useConfig();
 const toast = useToast();
 const { isOnline } = useNetworkStatus();
 const creditsModal = useCreditsModal();
@@ -36,6 +36,8 @@ const {
   skipPost,
   markAsReplied,
   setFilter,
+  isQueueAtLimit,
+  maxQueueSize,
 } = usePosts();
 
 // AI matching state (includes heat check)
@@ -86,6 +88,39 @@ async function runAIMatching() {
 
     if (!matchResponse.success) {
       console.log('[MainView] Response error:', matchResponse.error);
+
+      // Check for RSS permission required error
+      if (matchResponse.error === 'RSS_PERMISSION_REQUIRED') {
+        console.log('[MainView] RSS permission required, requesting...');
+        toast.warning('Permission required to access your RSS feed.');
+
+        // Request permission - we're in a user gesture context from the button click
+        const granted = await requestRssFeedPermission();
+
+        if (granted) {
+          toast.success('Permission granted! Retrying...');
+          // Retry the AI matching now that we have permission
+          const retryResponse = (await sendMessage({ type: 'AI_MATCH_POSTS' })) as MessageResponse;
+          if (retryResponse.success) {
+            // Continue with heat check
+            const heatCheckResponse = (await sendMessage({ type: 'HEAT_CHECK_POSTS' })) as MessageResponse;
+            if (!heatCheckResponse.success && heatCheckResponse.error !== 'INSUFFICIENT_CREDITS') {
+              console.warn('Heat check failed:', heatCheckResponse.error);
+            }
+            await loadPosts();
+            setFilter('matched');
+            toast.success('AI matching complete');
+            isAIMatching.value = false;
+            return;
+          }
+          throw new Error(retryResponse.error ?? 'AI matching failed after permission grant');
+        } else {
+          aiMatchError.value = 'Permission denied. Please grant access to your RSS feed URL in settings.';
+          isAIMatching.value = false;
+          return;
+        }
+      }
+
       // Check for insufficient credits error
       if (matchResponse.error === 'INSUFFICIENT_CREDITS') {
         console.log('[MainView] Showing credits modal');
@@ -327,6 +362,33 @@ async function handleJumpToPost(postId: string, _platform: string) {
           </svg>
         </button>
       </div>
+
+      <!-- Queue limit warning banner -->
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="-translate-y-full opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="translate-y-0 opacity-100"
+        leave-to-class="-translate-y-full opacity-0"
+      >
+        <div
+          v-if="isQueueAtLimit"
+          class="mb-4 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2"
+        >
+          <svg class="h-5 w-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          <span class="text-sm text-amber-700">
+            Queue limit reached ({{ maxQueueSize }} posts). Run AI Match or adjust limit in settings.
+          </span>
+        </div>
+      </Transition>
 
       <!-- Filter tabs -->
       <div class="mb-4 flex rounded-lg bg-gray-100 p-1">
