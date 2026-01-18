@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSetup } from '../composables/useSetup'
-import ApiKeyInput from '../components/ApiKeyInput.vue'
+import { useSetup } from '../composables/useSetup';
+import ApiKeyInput from '../components/ApiKeyInput.vue';
 
 const {
   currentStep,
@@ -15,7 +15,7 @@ const {
   validateFeedUrl,
   finishSetup,
   goToStep1,
-} = useSetup()
+} = useSetup();
 </script>
 
 <template>
@@ -24,9 +24,7 @@ const {
       <!-- Header -->
       <div class="mb-8 text-center">
         <h1 class="text-2xl font-bold text-gray-900">ReplyQueue</h1>
-        <p class="mt-2 text-sm text-gray-600">
-          Set up your extension to start monitoring posts
-        </p>
+        <p class="mt-2 text-sm text-gray-600">Set up your extension to start monitoring posts</p>
       </div>
 
       <!-- Progress indicator -->
@@ -34,25 +32,14 @@ const {
         <div class="flex items-center justify-center space-x-4">
           <div
             class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium"
-            :class="
-              currentStep >= 1
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-600'
-            "
+            :class="currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'"
           >
             1
           </div>
-          <div
-            class="h-1 w-16"
-            :class="currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'"
-          />
+          <div class="h-1 w-16" :class="currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'" />
           <div
             class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium"
-            :class="
-              currentStep >= 2
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-600'
-            "
+            :class="currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'"
           >
             2
           </div>
@@ -66,37 +53,20 @@ const {
       <!-- Step 1: API Key -->
       <div v-if="currentStep === 1" class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700">
-            OpenRouter API Key
-          </label>
+          <label class="block text-sm font-medium text-gray-700"> OpenRouter API Key </label>
           <p class="mt-1 text-xs text-gray-500">
             Get your API key from
-            <a
-              href="https://openrouter.ai/keys"
-              target="_blank"
-              class="text-blue-600 hover:underline"
+            <a href="https://openrouter.ai/keys" target="_blank" class="text-blue-600 hover:underline"
               >openrouter.ai/keys</a
             >
           </p>
           <div class="mt-2">
-            <ApiKeyInput
-              v-model="apiKey"
-              :disabled="isValidatingApiKey"
-              :error="apiKeyValidation?.error"
-            />
+            <ApiKeyInput v-model="apiKey" :disabled="isValidatingApiKey" :error="apiKeyValidation?.error" />
           </div>
-          <p
-            v-if="apiKeyValidation?.error"
-            class="mt-1 text-sm text-red-600"
-          >
+          <p v-if="apiKeyValidation?.error" class="mt-1 text-sm text-red-600">
             {{ apiKeyValidation.error }}
           </p>
-          <p
-            v-if="apiKeyValidation?.valid"
-            class="mt-1 text-sm text-green-600"
-          >
-            API key validated successfully
-          </p>
+          <p v-if="apiKeyValidation?.valid" class="mt-1 text-sm text-green-600">API key validated successfully</p>
         </div>
 
         <button
@@ -106,19 +76,8 @@ const {
           @click="validateApiKey"
         >
           <span v-if="isValidatingApiKey" class="flex items-center justify-center">
-            <svg
-              class="mr-2 h-4 w-4 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              />
+            <svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
               <path
                 class="opacity-75"
                 fill="currentColor"
@@ -134,23 +93,15 @@ const {
       <!-- Step 2: RSS Feed -->
       <div v-if="currentStep === 2" class="space-y-4">
         <div class="flex items-center justify-between">
-          <button
-            type="button"
-            class="text-sm text-blue-600 hover:underline"
-            @click="goToStep1"
-          >
+          <button type="button" class="text-sm text-blue-600 hover:underline" @click="goToStep1">
             Back to API Key
           </button>
           <span class="text-sm text-green-600">API Key verified</span>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700">
-            RSS Feed URL
-          </label>
-          <p class="mt-1 text-xs text-gray-500">
-            Enter the RSS feed URL to monitor for new posts
-          </p>
+          <label class="block text-sm font-medium text-gray-700"> RSS Feed URL </label>
+          <p class="mt-1 text-xs text-gray-500">Enter the RSS feed URL to monitor for new posts</p>
           <div class="mt-2">
             <input
               v-model="rssFeedUrl"
@@ -159,8 +110,7 @@ const {
               :disabled="isValidatingFeed"
               class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               :class="{
-                'border-red-500 focus:border-red-500 focus:ring-red-500':
-                  feedValidation?.error,
+                'border-red-500 focus:border-red-500 focus:ring-red-500': feedValidation?.error,
               }"
             />
           </div>
@@ -169,9 +119,7 @@ const {
           </p>
           <div v-if="feedValidation?.valid" class="mt-1 text-sm text-green-600">
             <p>Feed validated: {{ feedValidation.feedTitle }}</p>
-            <p class="text-xs text-gray-500">
-              {{ feedValidation.itemCount }} items found
-            </p>
+            <p class="text-xs text-gray-500">{{ feedValidation.itemCount }} items found</p>
           </div>
         </div>
 
@@ -182,19 +130,8 @@ const {
           @click="validateFeedUrl"
         >
           <span v-if="isValidatingFeed" class="flex items-center justify-center">
-            <svg
-              class="mr-2 h-4 w-4 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              />
+            <svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
               <path
                 class="opacity-75"
                 fill="currentColor"

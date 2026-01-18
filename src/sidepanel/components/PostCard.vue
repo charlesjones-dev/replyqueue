@@ -1,70 +1,70 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { MatchedPostWithScore, ReplySuggestion, PostTone } from '@shared/types'
-import PlatformBadge from './PlatformBadge.vue'
-import ReplySuggestionComponent from './ReplySuggestion.vue'
+import { ref, computed } from 'vue';
+import type { MatchedPostWithScore, ReplySuggestion, PostTone } from '@shared/types';
+import PlatformBadge from './PlatformBadge.vue';
+import ReplySuggestionComponent from './ReplySuggestion.vue';
 
 // Extended type that includes reply suggestions
 interface MatchedPostWithSuggestions extends MatchedPostWithScore {
-  replySuggestions?: ReplySuggestion[]
+  replySuggestions?: ReplySuggestion[];
 }
 
 const props = defineProps<{
-  match: MatchedPostWithSuggestions
-}>()
+  match: MatchedPostWithSuggestions;
+}>();
 
 const emit = defineEmits<{
-  (e: 'skip', postId: string, platform: string): void
-  (e: 'replied', postId: string, platform: string): void
-  (e: 'open', postId: string, platform: string): void
-  (e: 'regenerate', postId: string, platform: string): void
-  (e: 'jumpToPost', postId: string, platform: string): void
-}>()
+  (e: 'skip', postId: string, platform: string): void;
+  (e: 'replied', postId: string, platform: string): void;
+  (e: 'open', postId: string, platform: string): void;
+  (e: 'regenerate', postId: string, platform: string): void;
+  (e: 'jumpToPost', postId: string, platform: string): void;
+}>();
 
 // State for expanded suggestions and content
-const showAllSuggestions = ref(false)
-const isRegenerating = ref(false)
-const isJumping = ref(false)
-const isContentExpanded = ref(false)
+const showAllSuggestions = ref(false);
+const isRegenerating = ref(false);
+const isJumping = ref(false);
+const isContentExpanded = ref(false);
 
-const scorePercentage = computed(() => Math.round(props.match.score * 100))
+const scorePercentage = computed(() => Math.round(props.match.score * 100));
 
 const scoreColor = computed(() => {
-  if (props.match.score >= 0.7) return 'text-green-600 bg-green-100'
-  if (props.match.score >= 0.4) return 'text-yellow-600 bg-yellow-100'
-  return 'text-gray-600 bg-gray-100'
-})
+  if (props.match.score >= 0.7) return 'text-green-600 bg-green-100';
+  if (props.match.score >= 0.4) return 'text-yellow-600 bg-yellow-100';
+  return 'text-gray-600 bg-gray-100';
+});
 
 const statusBadge = computed(() => {
   switch (props.match.status) {
     case 'pending':
-      return { text: 'Pending', class: 'bg-gray-100 text-gray-600' }
+      return { text: 'Pending', class: 'bg-gray-100 text-gray-600' };
     case 'replied':
-      return { text: 'Replied', class: 'bg-green-100 text-green-600' }
+      return { text: 'Replied', class: 'bg-green-100 text-green-600' };
     case 'skipped':
-      return { text: 'Skipped', class: 'bg-gray-100 text-gray-400' }
+      return { text: 'Skipped', class: 'bg-gray-100 text-gray-400' };
     default:
-      return { text: 'Unknown', class: 'bg-gray-100 text-gray-600' }
+      return { text: 'Unknown', class: 'bg-gray-100 text-gray-600' };
   }
-})
+});
 
-const maxContentLength = 200
+const maxContentLength = 200;
 
 const isTruncatable = computed(() => {
-  const content = props.match.post.content || ''
-  return content.length > maxContentLength
-})
+  const content = props.match.post.content || '';
+  return content.length > maxContentLength;
+});
 
 const displayContent = computed(() => {
-  const content = props.match.post.content || ''
-  if (!isTruncatable.value || isContentExpanded.value) return content
-  return content.slice(0, maxContentLength) + '...'
-})
+  const content = props.match.post.content || '';
+  if (!isTruncatable.value || isContentExpanded.value) return content;
+  return content.slice(0, maxContentLength) + '...';
+});
 
 // Heat check badge configuration
 const heatBadgeConfig = computed(() => {
-  const heatCheck = props.match.heatCheck
-  if (!heatCheck) return null
+  const heatCheck = props.match.heatCheck;
+  if (!heatCheck) return null;
 
   const configs: Record<PostTone, { label: string; class: string; icon: string }> = {
     positive: {
@@ -97,70 +97,68 @@ const heatBadgeConfig = computed(() => {
       class: 'bg-gray-100 text-gray-600',
       icon: '•',
     },
-  }
+  };
 
-  return configs[heatCheck.tone]
-})
+  return configs[heatCheck.tone];
+});
 
 const relativeTime = computed(() => {
-  const timestamp = props.match.post.extractedAt
-  const now = Date.now()
-  const diff = now - timestamp
-  const minutes = Math.floor(diff / 1000 / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
+  const timestamp = props.match.post.extractedAt;
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 1000 / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
 
-  if (days > 0) return `${days}d ago`
-  if (hours > 0) return `${hours}h ago`
-  if (minutes > 0) return `${minutes}m ago`
-  return 'Just now'
-})
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'Just now';
+});
 
 function handleSkip() {
-  emit('skip', props.match.post.id, props.match.post.platform)
+  emit('skip', props.match.post.id, props.match.post.platform);
 }
 
 function handleReplied() {
-  emit('replied', props.match.post.id, props.match.post.platform)
+  emit('replied', props.match.post.id, props.match.post.platform);
 }
 
 function handleOpen() {
-  emit('open', props.match.post.id, props.match.post.platform)
+  emit('open', props.match.post.id, props.match.post.platform);
 }
 
 function handleJumpToPost() {
-  isJumping.value = true
-  emit('jumpToPost', props.match.post.id, props.match.post.platform)
+  isJumping.value = true;
+  emit('jumpToPost', props.match.post.id, props.match.post.platform);
   // Reset after a short delay
   setTimeout(() => {
-    isJumping.value = false
-  }, 1500)
+    isJumping.value = false;
+  }, 1500);
 }
 
 function handleRegenerate() {
-  isRegenerating.value = true
-  emit('regenerate', props.match.post.id, props.match.post.platform)
+  isRegenerating.value = true;
+  emit('regenerate', props.match.post.id, props.match.post.platform);
   // Reset after a short delay (the actual regeneration happens async)
   setTimeout(() => {
-    isRegenerating.value = false
-  }, 2000)
+    isRegenerating.value = false;
+  }, 2000);
 }
 
 // Computed for suggestions display
-const hasSuggestions = computed(() =>
-  props.match.replySuggestions && props.match.replySuggestions.length > 0
-)
+const hasSuggestions = computed(() => props.match.replySuggestions && props.match.replySuggestions.length > 0);
 
 const displayedSuggestions = computed(() => {
-  if (!props.match.replySuggestions) return []
-  if (showAllSuggestions.value) return props.match.replySuggestions
-  return props.match.replySuggestions.slice(0, 1)
-})
+  if (!props.match.replySuggestions) return [];
+  if (showAllSuggestions.value) return props.match.replySuggestions;
+  return props.match.replySuggestions.slice(0, 1);
+});
 
 const hiddenSuggestionsCount = computed(() => {
-  if (!props.match.replySuggestions) return 0
-  return Math.max(0, props.match.replySuggestions.length - 1)
-})
+  if (!props.match.replySuggestions) return 0;
+  return Math.max(0, props.match.replySuggestions.length - 1);
+});
 </script>
 
 <template>
@@ -172,10 +170,7 @@ const hiddenSuggestionsCount = computed(() => {
     <div class="mb-3 flex items-start justify-between">
       <div class="flex items-center gap-2">
         <PlatformBadge :platform="match.post.platform" />
-        <span
-          class="rounded-full px-2 py-0.5 text-xs font-medium"
-          :class="statusBadge.class"
-        >
+        <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="statusBadge.class">
           {{ statusBadge.text }}
         </span>
       </div>
@@ -278,9 +273,10 @@ const hiddenSuggestionsCount = computed(() => {
         class="mt-2 text-xs text-blue-600 hover:text-blue-700"
         @click="showAllSuggestions = !showAllSuggestions"
       >
-        {{ showAllSuggestions
-          ? 'Show less'
-          : `Show ${hiddenSuggestionsCount} more suggestion${hiddenSuggestionsCount > 1 ? 's' : ''}`
+        {{
+          showAllSuggestions
+            ? 'Show less'
+            : `Show ${hiddenSuggestionsCount} more suggestion${hiddenSuggestionsCount > 1 ? 's' : ''}`
         }}
       </button>
     </div>
@@ -307,33 +303,11 @@ const hiddenSuggestionsCount = computed(() => {
           title="Scroll to post in feed"
           @click="handleJumpToPost"
         >
-          <svg
-            v-if="isJumping"
-            class="h-3 w-3 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            />
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
+          <svg v-if="isJumping" class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <svg
-            v-else
-            class="h-3 w-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg v-else class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -358,17 +332,17 @@ const hiddenSuggestionsCount = computed(() => {
           :disabled="isRegenerating"
           @click="handleRegenerate"
         >
-          <svg
-            v-if="isRegenerating"
-            class="h-3 w-3 animate-spin"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
+          <svg v-if="isRegenerating" class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
           <svg v-else class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
           </svg>
           {{ isRegenerating ? 'Generating...' : 'Draft Reply' }}
         </button>

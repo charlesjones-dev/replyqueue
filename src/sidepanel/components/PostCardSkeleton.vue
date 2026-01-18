@@ -3,10 +3,7 @@
 </script>
 
 <template>
-  <div
-    class="animate-pulse rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-    aria-hidden="true"
-  >
+  <div class="animate-pulse rounded-lg border border-gray-200 bg-white p-4 shadow-sm" aria-hidden="true">
     <!-- Header skeleton -->
     <div class="mb-3 flex items-start justify-between">
       <div class="flex items-center gap-2">

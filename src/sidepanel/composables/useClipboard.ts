@@ -3,14 +3,14 @@
  * Provides copy-to-clipboard functionality with confirmation feedback
  */
 
-import { ref } from 'vue'
+import { ref } from 'vue';
 
 // State for copied confirmation
-const copiedId = ref<string | null>(null)
-const copyTimeoutId = ref<ReturnType<typeof setTimeout> | null>(null)
+const copiedId = ref<string | null>(null);
+const copyTimeoutId = ref<ReturnType<typeof setTimeout> | null>(null);
 
 // Duration to show "Copied!" confirmation
-const COPIED_DISPLAY_DURATION = 2000
+const COPIED_DISPLAY_DURATION = 2000;
 
 export function useClipboard() {
   /**
@@ -23,54 +23,54 @@ export function useClipboard() {
     try {
       // Clear any existing timeout
       if (copyTimeoutId.value) {
-        clearTimeout(copyTimeoutId.value)
+        clearTimeout(copyTimeoutId.value);
       }
 
       // Use the Clipboard API
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(text);
 
       // Set copied state for UI feedback
       if (id) {
-        copiedId.value = id
+        copiedId.value = id;
 
         // Reset after delay
         copyTimeoutId.value = setTimeout(() => {
-          copiedId.value = null
-          copyTimeoutId.value = null
-        }, COPIED_DISPLAY_DURATION)
+          copiedId.value = null;
+          copyTimeoutId.value = null;
+        }, COPIED_DISPLAY_DURATION);
       }
 
-      return true
+      return true;
     } catch (error) {
-      console.error('[useClipboard] Failed to copy to clipboard:', error)
+      console.error('[useClipboard] Failed to copy to clipboard:', error);
 
       // Fallback: try using execCommand (for older browsers)
       try {
-        const textArea = document.createElement('textarea')
-        textArea.value = text
-        textArea.style.position = 'fixed'
-        textArea.style.left = '-9999px'
-        textArea.style.top = '-9999px'
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
 
-        const successful = document.execCommand('copy')
-        document.body.removeChild(textArea)
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
 
         if (successful && id) {
-          copiedId.value = id
+          copiedId.value = id;
 
           copyTimeoutId.value = setTimeout(() => {
-            copiedId.value = null
-            copyTimeoutId.value = null
-          }, COPIED_DISPLAY_DURATION)
+            copiedId.value = null;
+            copyTimeoutId.value = null;
+          }, COPIED_DISPLAY_DURATION);
         }
 
-        return successful
+        return successful;
       } catch (fallbackError) {
-        console.error('[useClipboard] Fallback copy also failed:', fallbackError)
-        return false
+        console.error('[useClipboard] Fallback copy also failed:', fallbackError);
+        return false;
       }
     }
   }
@@ -80,7 +80,7 @@ export function useClipboard() {
    * @param id The item ID to check
    */
   function wasCopied(id: string): boolean {
-    return copiedId.value === id
+    return copiedId.value === id;
   }
 
   /**
@@ -88,10 +88,10 @@ export function useClipboard() {
    */
   function resetCopied(): void {
     if (copyTimeoutId.value) {
-      clearTimeout(copyTimeoutId.value)
-      copyTimeoutId.value = null
+      clearTimeout(copyTimeoutId.value);
+      copyTimeoutId.value = null;
     }
-    copiedId.value = null
+    copiedId.value = null;
   }
 
   return {
@@ -99,5 +99,5 @@ export function useClipboard() {
     copyToClipboard,
     wasCopied,
     resetCopied,
-  }
+  };
 }

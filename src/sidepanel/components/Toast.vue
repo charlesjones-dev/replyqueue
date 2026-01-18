@@ -1,46 +1,42 @@
 <script setup lang="ts">
-import { useToast, type ToastType } from '../composables/useToast'
+import { useToast, type ToastType } from '../composables/useToast';
 
-const { toasts, dismiss } = useToast()
+const { toasts, dismiss } = useToast();
 
 function getToastClasses(type: ToastType): string {
-  const baseClasses = 'rounded-lg px-4 py-3 shadow-lg border flex items-start gap-3'
+  const baseClasses = 'rounded-lg px-4 py-3 shadow-lg border flex items-start gap-3';
 
   switch (type) {
     case 'success':
-      return `${baseClasses} bg-green-50 border-green-200 text-green-800`
+      return `${baseClasses} bg-green-50 border-green-200 text-green-800`;
     case 'error':
-      return `${baseClasses} bg-red-50 border-red-200 text-red-800`
+      return `${baseClasses} bg-red-50 border-red-200 text-red-800`;
     case 'warning':
-      return `${baseClasses} bg-yellow-50 border-yellow-200 text-yellow-800`
+      return `${baseClasses} bg-yellow-50 border-yellow-200 text-yellow-800`;
     case 'info':
     default:
-      return `${baseClasses} bg-blue-50 border-blue-200 text-blue-800`
+      return `${baseClasses} bg-blue-50 border-blue-200 text-blue-800`;
   }
 }
 
 function getIconColor(type: ToastType): string {
   switch (type) {
     case 'success':
-      return 'text-green-500'
+      return 'text-green-500';
     case 'error':
-      return 'text-red-500'
+      return 'text-red-500';
     case 'warning':
-      return 'text-yellow-500'
+      return 'text-yellow-500';
     case 'info':
     default:
-      return 'text-blue-500'
+      return 'text-blue-500';
   }
 }
 </script>
 
 <template>
   <Teleport to="body">
-    <div
-      class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"
-      aria-live="polite"
-      aria-atomic="true"
-    >
+    <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2" aria-live="polite" aria-atomic="true">
       <TransitionGroup
         enter-active-class="transition duration-200 ease-out"
         enter-from-class="translate-y-2 opacity-0"
@@ -49,28 +45,12 @@ function getIconColor(type: ToastType): string {
         leave-from-class="translate-y-0 opacity-100"
         leave-to-class="translate-y-2 opacity-0"
       >
-        <div
-          v-for="toast in toasts"
-          :key="toast.id"
-          :class="getToastClasses(toast.type)"
-          role="alert"
-        >
+        <div v-for="toast in toasts" :key="toast.id" :class="getToastClasses(toast.type)" role="alert">
           <!-- Icon -->
           <div :class="getIconColor(toast.type)" class="flex-shrink-0 mt-0.5">
             <!-- Success icon -->
-            <svg
-              v-if="toast.type === 'success'"
-              class="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"
-              />
+            <svg v-if="toast.type === 'success'" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
 
             <!-- Error icon -->
@@ -81,12 +61,7 @@ function getIconColor(type: ToastType): string {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
 
             <!-- Warning icon -->
@@ -106,13 +81,7 @@ function getIconColor(type: ToastType): string {
             </svg>
 
             <!-- Info icon -->
-            <svg
-              v-else
-              class="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg v-else class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -139,12 +108,7 @@ function getIconColor(type: ToastType): string {
           >
             <span class="sr-only">Dismiss</span>
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>

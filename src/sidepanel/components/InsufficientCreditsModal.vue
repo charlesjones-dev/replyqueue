@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useCreditsModal } from '../composables/useCreditsModal'
+import { useCreditsModal } from '../composables/useCreditsModal';
 
-const { state, hide, openCreditsPage } = useCreditsModal()
+const { state, hide, openCreditsPage } = useCreditsModal();
 
 function handleAddCredits(): void {
-  openCreditsPage()
-  hide()
+  openCreditsPage();
+  hide();
 }
 </script>
 
@@ -19,15 +19,9 @@ function handleAddCredits(): void {
       leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
-      <div
-        v-if="state.isOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-      >
+      <div v-if="state.isOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <!-- Backdrop -->
-        <div
-          class="absolute inset-0 bg-black/50"
-          @click="hide"
-        />
+        <div class="absolute inset-0 bg-black/50" @click="hide" />
 
         <!-- Modal -->
         <div
@@ -38,12 +32,7 @@ function handleAddCredits(): void {
         >
           <!-- Warning icon -->
           <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
-            <svg
-              class="h-6 w-6 text-yellow-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -55,10 +44,7 @@ function handleAddCredits(): void {
 
           <!-- Content -->
           <div class="mt-4 text-center">
-            <h3
-              id="credits-modal-title"
-              class="text-lg font-semibold text-gray-900"
-            >
+            <h3 id="credits-modal-title" class="text-lg font-semibold text-gray-900">
               Insufficient OpenRouter Credits
             </h3>
 
@@ -67,10 +53,7 @@ function handleAddCredits(): void {
             </p>
 
             <!-- Token details if available -->
-            <div
-              v-if="state.requestedTokens && state.availableTokens"
-              class="mt-3 rounded-md bg-gray-50 p-3 text-sm"
-            >
+            <div v-if="state.requestedTokens && state.availableTokens" class="mt-3 rounded-md bg-gray-50 p-3 text-sm">
               <div class="flex justify-between text-gray-600">
                 <span>Requested:</span>
                 <span class="font-medium text-gray-900">{{ state.requestedTokens.toLocaleString() }} tokens</span>

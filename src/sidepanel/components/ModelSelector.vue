@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import type { OpenRouterModel } from '@shared/types'
-import { useModels, getCostTier } from '../composables/useModels'
-import { useConfig } from '../composables/useConfig'
+import { ref, computed, onMounted, watch } from 'vue';
+import type { OpenRouterModel } from '@shared/types';
+import { useModels, getCostTier } from '../composables/useModels';
+import { useConfig } from '../composables/useConfig';
 
 const props = defineProps<{
-  modelValue?: string
-}>()
+  modelValue?: string;
+}>();
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
-}>()
+  (e: 'update:modelValue', value: string): void;
+}>();
 
 const {
   displayModels,
@@ -23,49 +23,55 @@ const {
   setSearchQuery,
   toggleShowAll,
   formatPrice,
-} = useModels()
+} = useModels();
 
-const { config } = useConfig()
+const { config } = useConfig();
 
-const isExpanded = ref(false)
-const searchInput = ref('')
+const isExpanded = ref(false);
+const searchInput = ref('');
 
 // Watch search input and update filter
 watch(searchInput, (value) => {
-  setSearchQuery(value)
-})
+  setSearchQuery(value);
+});
 
 // Selected model computed from props or config
-const selectedModelId = computed(() => props.modelValue ?? config.value.selectedModel)
+const selectedModelId = computed(() => props.modelValue ?? config.value.selectedModel);
 
 // Get selected model details
 const selectedModel = computed(() => {
-  return displayModels.value.find(m => m.id === selectedModelId.value) ||
-         filteredModels.value.find(m => m.id === selectedModelId.value)
-})
+  return (
+    displayModels.value.find((m) => m.id === selectedModelId.value) ||
+    filteredModels.value.find((m) => m.id === selectedModelId.value)
+  );
+});
 
 // Cost tier color
 function getCostTierColor(tier: '$' | '$$' | '$$$'): string {
   switch (tier) {
-    case '$': return 'text-green-600'
-    case '$$': return 'text-yellow-600'
-    case '$$$': return 'text-red-600'
-    default: return 'text-gray-600'
+    case '$':
+      return 'text-green-600';
+    case '$$':
+      return 'text-yellow-600';
+    case '$$$':
+      return 'text-red-600';
+    default:
+      return 'text-gray-600';
   }
 }
 
 function selectModel(model: OpenRouterModel) {
-  emit('update:modelValue', model.id)
-  isExpanded.value = false
+  emit('update:modelValue', model.id);
+  isExpanded.value = false;
 }
 
 async function handleRefresh() {
-  await refreshModels()
+  await refreshModels();
 }
 
 onMounted(() => {
-  fetchModels()
-})
+  fetchModels();
+});
 </script>
 
 <template>
@@ -78,10 +84,7 @@ onMounted(() => {
     >
       <div class="flex items-center gap-2 min-w-0">
         <template v-if="selectedModel">
-          <span
-            class="font-medium"
-            :class="getCostTierColor(getCostTier(selectedModel.pricing))"
-          >
+          <span class="font-medium" :class="getCostTierColor(getCostTier(selectedModel.pricing))">
             {{ getCostTier(selectedModel.pricing) }}
           </span>
           <span class="truncate">{{ selectedModel.name }}</span>
@@ -178,22 +181,12 @@ onMounted(() => {
       <!-- Error state -->
       <div v-if="error" class="p-3 text-center text-sm text-red-600">
         {{ error }}
-        <button
-          type="button"
-          class="mt-1 text-blue-600 hover:underline"
-          @click="handleRefresh"
-        >
-          Retry
-        </button>
+        <button type="button" class="mt-1 text-blue-600 hover:underline" @click="handleRefresh">Retry</button>
       </div>
 
       <!-- Loading state -->
       <div v-else-if="isLoading && displayModels.length === 0" class="p-4 text-center">
-        <svg
-          class="mx-auto h-5 w-5 animate-spin text-blue-600"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
+        <svg class="mx-auto h-5 w-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
@@ -201,9 +194,7 @@ onMounted(() => {
       </div>
 
       <!-- Empty state -->
-      <div v-else-if="displayModels.length === 0" class="p-4 text-center text-sm text-gray-500">
-        No models found
-      </div>
+      <div v-else-if="displayModels.length === 0" class="p-4 text-center text-sm text-gray-500">No models found</div>
 
       <!-- Model list -->
       <div v-else class="divide-y divide-gray-100">
@@ -237,10 +228,7 @@ onMounted(() => {
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <!-- Cost tier -->
-              <span
-                class="font-medium"
-                :class="getCostTierColor(getCostTier(model.pricing))"
-              >
+              <span class="font-medium" :class="getCostTierColor(getCostTier(model.pricing))">
                 {{ getCostTier(model.pricing) }}
               </span>
 
@@ -270,10 +258,6 @@ onMounted(() => {
     </div>
 
     <!-- Backdrop to close dropdown -->
-    <div
-      v-if="isExpanded"
-      class="fixed inset-0 z-0"
-      @click="isExpanded = false"
-    />
+    <div v-if="isExpanded" class="fixed inset-0 z-0" @click="isExpanded = false" />
   </div>
 </template>

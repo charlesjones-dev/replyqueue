@@ -1,8 +1,8 @@
-import { ref } from 'vue'
-import type { AppView } from '@shared/types'
-import { getConfig } from '@shared/storage'
+import { ref } from 'vue';
+import type { AppView } from '@shared/types';
+import { getConfig } from '@shared/storage';
 
-const currentView = ref<AppView>('setup')
+const currentView = ref<AppView>('setup');
 
 export function useAppState() {
   /**
@@ -10,14 +10,14 @@ export function useAppState() {
    */
   async function checkSetupStatus(): Promise<void> {
     try {
-      const config = await getConfig()
+      const config = await getConfig();
       if (config.isSetupComplete && config.apiKey && config.rssFeedUrl) {
-        currentView.value = 'main'
+        currentView.value = 'main';
       } else {
-        currentView.value = 'setup'
+        currentView.value = 'setup';
       }
     } catch {
-      currentView.value = 'setup'
+      currentView.value = 'setup';
     }
   }
 
@@ -25,35 +25,35 @@ export function useAppState() {
    * Navigate to a specific view
    */
   function navigateTo(view: AppView): void {
-    currentView.value = view
+    currentView.value = view;
   }
 
   /**
    * Navigate to main view after setup completion
    */
   function completeSetup(): void {
-    currentView.value = 'main'
+    currentView.value = 'main';
   }
 
   /**
    * Navigate to settings view
    */
   function openSettings(): void {
-    currentView.value = 'settings'
+    currentView.value = 'settings';
   }
 
   /**
    * Navigate back to main view from settings
    */
   function closeSettings(): void {
-    currentView.value = 'main'
+    currentView.value = 'main';
   }
 
   /**
    * Navigate to setup view
    */
   function openSetup(): void {
-    currentView.value = 'setup'
+    currentView.value = 'setup';
   }
 
   return {
@@ -64,5 +64,5 @@ export function useAppState() {
     openSettings,
     closeSettings,
     openSetup,
-  }
+  };
 }

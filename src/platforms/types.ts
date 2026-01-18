@@ -9,39 +9,39 @@
  */
 export interface ExtractedPost {
   /** Unique identifier for the post (platform-specific) */
-  id: string
+  id: string;
   /** URL to the original post */
-  url: string
+  url: string;
   /** Author's display name */
-  authorName: string
+  authorName: string;
   /** Author's headline/bio (if available) */
-  authorHeadline?: string
+  authorHeadline?: string;
   /** Author's profile URL */
-  authorProfileUrl?: string
+  authorProfileUrl?: string;
   /** Post text content */
-  content: string
+  content: string;
   /** Timestamp when the post was published */
-  publishedAt?: string
+  publishedAt?: string;
   /** Number of reactions/likes */
-  reactionCount?: number
+  reactionCount?: number;
   /** Number of comments */
-  commentCount?: number
+  commentCount?: number;
   /** Number of reposts/shares */
-  repostCount?: number
+  repostCount?: number;
   /** Whether this is a repost of another post */
-  isRepost?: boolean
+  isRepost?: boolean;
   /** Original post info if this is a repost */
   originalPost?: {
-    authorName: string
-    authorProfileUrl?: string
-    content?: string
-  }
+    authorName: string;
+    authorProfileUrl?: string;
+    content?: string;
+  };
   /** Type of content attached to the post */
-  contentType?: 'text' | 'image' | 'video' | 'article' | 'document' | 'poll'
+  contentType?: 'text' | 'image' | 'video' | 'article' | 'document' | 'poll';
   /** Platform this post was extracted from */
-  platform: string
+  platform: string;
   /** Timestamp when this post was extracted */
-  extractedAt: number
+  extractedAt: number;
 }
 
 /**
@@ -49,33 +49,33 @@ export interface ExtractedPost {
  */
 export interface FeedSelectors {
   /** Selector for the main feed container */
-  feedContainer: string
+  feedContainer: string;
   /** Selector for individual post elements */
-  postItem: string
+  postItem: string;
   /** Selector for the author name element */
-  authorName: string
+  authorName: string;
   /** Selector for the author headline element */
-  authorHeadline?: string
+  authorHeadline?: string;
   /** Selector for the author profile link */
-  authorProfileLink?: string
+  authorProfileLink?: string;
   /** Selector for the post content text */
-  postContent: string
+  postContent: string;
   /** Selector for the post timestamp */
-  postTimestamp?: string
+  postTimestamp?: string;
   /** Selector for the reactions count */
-  reactionCount?: string
+  reactionCount?: string;
   /** Selector for the comments count */
-  commentCount?: string
+  commentCount?: string;
   /** Selector for the repost count */
-  repostCount?: string
+  repostCount?: string;
   /** Selector to identify if a post is a repost */
-  repostIndicator?: string
+  repostIndicator?: string;
   /** Selector for article/link shares */
-  articleShare?: string
+  articleShare?: string;
   /** Selector for images in posts */
-  postImage?: string
+  postImage?: string;
   /** Selector for the post actions menu or link */
-  postLink?: string
+  postLink?: string;
 }
 
 /**
@@ -84,50 +84,50 @@ export interface FeedSelectors {
  */
 export interface PlatformAdapter {
   /** Platform identifier (e.g., 'linkedin', 'twitter') */
-  readonly platformId: string
+  readonly platformId: string;
 
   /** Human-readable platform name */
-  readonly platformName: string
+  readonly platformName: string;
 
   /** DOM selectors for this platform */
-  readonly selectors: FeedSelectors
+  readonly selectors: FeedSelectors;
 
   /**
    * Check if the current page is a feed page that should be monitored
    * @param url Current page URL
    */
-  isFeedPage(url: string): boolean
+  isFeedPage(url: string): boolean;
 
   /**
    * Extract a post from a DOM element
    * @param element The post container element
    * @returns Extracted post or null if extraction fails
    */
-  extractPost(element: Element): ExtractedPost | null
+  extractPost(element: Element): ExtractedPost | null;
 
   /**
    * Get the unique ID for a post element
    * @param element The post container element
    */
-  getPostId(element: Element): string | null
+  getPostId(element: Element): string | null;
 
   /**
    * Generate the permalink URL for a post
    * @param postId The post's unique identifier
    */
-  getPostUrl(postId: string): string
+  getPostUrl(postId: string): string;
 
   /**
    * Scroll the page to a specific post
    * @param postId The post's unique identifier
    * @returns true if post was found and scrolled to, false otherwise
    */
-  scrollToPost(postId: string): boolean
+  scrollToPost(postId: string): boolean;
 
   /**
    * Find all post elements currently in the DOM
    */
-  findPostElements(): Element[]
+  findPostElements(): Element[];
 }
 
 /**
@@ -135,7 +135,7 @@ export interface PlatformAdapter {
  */
 export interface PlatformRegistryEntry {
   /** URL patterns that match this platform (regex patterns) */
-  urlPatterns: RegExp[]
+  urlPatterns: RegExp[];
   /** Factory function to create the adapter */
-  createAdapter: () => PlatformAdapter
+  createAdapter: () => PlatformAdapter;
 }

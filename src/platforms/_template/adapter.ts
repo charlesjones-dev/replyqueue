@@ -14,16 +14,11 @@
  * 6. Add tests for the new adapter
  */
 
-import type { PlatformAdapter, ExtractedPost, FeedSelectors } from '../types'
-import {
-  platformSelectors,
-  platformExtraSelectors,
-  platformDataAttributes,
-  platformUrlPatterns,
-} from './selectors'
+import type { PlatformAdapter, ExtractedPost, FeedSelectors } from '../types';
+import { platformSelectors, platformExtraSelectors, platformDataAttributes, platformUrlPatterns } from './selectors';
 
 // Prefix for console logging
-const LOG_PREFIX = '[ReplyQueue:PLATFORM_NAME]'
+const LOG_PREFIX = '[ReplyQueue:PLATFORM_NAME]';
 
 /**
  * Platform adapter implementation
@@ -35,9 +30,9 @@ const LOG_PREFIX = '[ReplyQueue:PLATFORM_NAME]'
  * - LOG_PREFIX
  */
 export class PlatformNameAdapter implements PlatformAdapter {
-  readonly platformId = 'platform_name' // lowercase, no spaces
-  readonly platformName = 'Platform Name' // Human-readable name
-  readonly selectors: FeedSelectors = platformSelectors
+  readonly platformId = 'platform_name'; // lowercase, no spaces
+  readonly platformName = 'Platform Name'; // Human-readable name
+  readonly selectors: FeedSelectors = platformSelectors;
 
   /**
    * Check if the current page is a feed page that should be monitored
@@ -48,7 +43,7 @@ export class PlatformNameAdapter implements PlatformAdapter {
    * - Exclude: settings pages, messages, notifications, etc.
    */
   isFeedPage(url: string): boolean {
-    return platformUrlPatterns.feed.test(url)
+    return platformUrlPatterns.feed.test(url);
   }
 
   /**
@@ -60,8 +55,8 @@ export class PlatformNameAdapter implements PlatformAdapter {
    * - Return an array, even if empty
    */
   findPostElements(): Element[] {
-    const elements = document.querySelectorAll(this.selectors.postItem)
-    return Array.from(elements)
+    const elements = document.querySelectorAll(this.selectors.postItem);
+    return Array.from(elements);
   }
 
   /**
@@ -75,17 +70,17 @@ export class PlatformNameAdapter implements PlatformAdapter {
    */
   getPostId(element: Element): string | null {
     // Try to get the post ID from data attribute
-    const postId = element.getAttribute(platformDataAttributes.postId)
+    const postId = element.getAttribute(platformDataAttributes.postId);
     if (postId) {
-      const match = postId.match(platformDataAttributes.postIdPattern)
+      const match = postId.match(platformDataAttributes.postIdPattern);
       if (match) {
-        return match[1]
+        return match[1];
       }
     }
 
     // TODO: Implement fallback ID extraction
 
-    return null
+    return null;
   }
 
   /**
@@ -96,7 +91,7 @@ export class PlatformNameAdapter implements PlatformAdapter {
    * - Include any required path components
    */
   getPostUrl(postId: string): string {
-    return `${platformUrlPatterns.postPermalink}${postId}`
+    return `${platformUrlPatterns.postPermalink}${postId}`;
   }
 
   /**
@@ -109,15 +104,13 @@ export class PlatformNameAdapter implements PlatformAdapter {
    * @returns true if post was found and scrolled to, false otherwise
    */
   scrollToPost(postId: string): boolean {
-    const postElement = document.querySelector(
-      `[${platformDataAttributes.postId}*="${postId}"]`
-    )
+    const postElement = document.querySelector(`[${platformDataAttributes.postId}*="${postId}"]`);
     if (postElement) {
-      postElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      return true
+      postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return true;
     } else {
-      console.warn(`${LOG_PREFIX} Could not find post with ID: ${postId}`)
-      return false
+      console.warn(`${LOG_PREFIX} Could not find post with ID: ${postId}`);
+      return false;
     }
   }
 
@@ -132,31 +125,31 @@ export class PlatformNameAdapter implements PlatformAdapter {
    */
   extractPost(element: Element): ExtractedPost | null {
     try {
-      const postId = this.getPostId(element)
+      const postId = this.getPostId(element);
       if (!postId) {
-        console.debug(`${LOG_PREFIX} Could not extract post ID from element`)
-        return null
+        console.debug(`${LOG_PREFIX} Could not extract post ID from element`);
+        return null;
       }
 
       // Skip sponsored content
       if (this.isSponsored(element)) {
-        console.debug(`${LOG_PREFIX} Skipping sponsored post: ${postId}`)
-        return null
+        console.debug(`${LOG_PREFIX} Skipping sponsored post: ${postId}`);
+        return null;
       }
 
-      const authorName = this.extractAuthorName(element)
+      const authorName = this.extractAuthorName(element);
       if (!authorName) {
-        console.debug(`${LOG_PREFIX} Could not extract author name for post: ${postId}`)
-        return null
+        console.debug(`${LOG_PREFIX} Could not extract author name for post: ${postId}`);
+        return null;
       }
 
-      const content = this.extractPostContent(element)
+      const content = this.extractPostContent(element);
       if (!content) {
-        console.debug(`${LOG_PREFIX} Could not extract content for post: ${postId}`)
-        return null
+        console.debug(`${LOG_PREFIX} Could not extract content for post: ${postId}`);
+        return null;
       }
 
-      const isRepost = this.isRepost(element)
+      const isRepost = this.isRepost(element);
 
       const post: ExtractedPost = {
         id: postId,
@@ -174,13 +167,13 @@ export class PlatformNameAdapter implements PlatformAdapter {
         contentType: this.detectContentType(element),
         platform: this.platformId,
         extractedAt: Date.now(),
-      }
+      };
 
-      console.debug(`${LOG_PREFIX} Extracted post:`, post.id, post.authorName)
-      return post
+      console.debug(`${LOG_PREFIX} Extracted post:`, post.id, post.authorName);
+      return post;
     } catch (error) {
-      console.error(`${LOG_PREFIX} Error extracting post:`, error)
-      return null
+      console.error(`${LOG_PREFIX} Error extracting post:`, error);
+      return null;
     }
   }
 
@@ -193,73 +186,73 @@ export class PlatformNameAdapter implements PlatformAdapter {
    */
   private extractAuthorName(container: Element): string | undefined {
     // TODO: Implement author name extraction
-    const element = container.querySelector(this.selectors.authorName)
-    return element?.textContent?.trim()
+    const element = container.querySelector(this.selectors.authorName);
+    return element?.textContent?.trim();
   }
 
   /**
    * Extract the author's headline/bio
    */
   private extractAuthorHeadline(container: Element): string | undefined {
-    if (!this.selectors.authorHeadline) return undefined
-    const element = container.querySelector(this.selectors.authorHeadline)
-    return element?.textContent?.trim()
+    if (!this.selectors.authorHeadline) return undefined;
+    const element = container.querySelector(this.selectors.authorHeadline);
+    return element?.textContent?.trim();
   }
 
   /**
    * Extract the author's profile URL
    */
   private extractAuthorProfileUrl(container: Element): string | undefined {
-    if (!this.selectors.authorProfileLink) return undefined
-    const link = container.querySelector(this.selectors.authorProfileLink) as HTMLAnchorElement
-    return link?.href
+    if (!this.selectors.authorProfileLink) return undefined;
+    const link = container.querySelector(this.selectors.authorProfileLink) as HTMLAnchorElement;
+    return link?.href;
   }
 
   /**
    * Extract the main post content
    */
   private extractPostContent(container: Element): string | undefined {
-    const element = container.querySelector(this.selectors.postContent)
-    return element?.textContent?.trim()
+    const element = container.querySelector(this.selectors.postContent);
+    return element?.textContent?.trim();
   }
 
   /**
    * Extract the post timestamp
    */
   private extractTimestamp(container: Element): string | undefined {
-    if (!this.selectors.postTimestamp) return undefined
-    const element = container.querySelector(this.selectors.postTimestamp)
+    if (!this.selectors.postTimestamp) return undefined;
+    const element = container.querySelector(this.selectors.postTimestamp);
     // Prefer datetime attribute over text content
-    return element?.getAttribute('datetime') || element?.textContent?.trim()
+    return element?.getAttribute('datetime') || element?.textContent?.trim();
   }
 
   /**
    * Extract engagement count from a selector
    */
   private extractEngagementCount(container: Element, selector?: string): number | undefined {
-    if (!selector) return undefined
-    const element = container.querySelector(selector)
-    const text = element?.textContent?.trim()
-    if (!text) return undefined
+    if (!selector) return undefined;
+    const element = container.querySelector(selector);
+    const text = element?.textContent?.trim();
+    if (!text) return undefined;
 
     // Parse count (handle K, M suffixes if needed)
-    const num = parseFloat(text.replace(/,/g, ''))
-    return isNaN(num) ? undefined : num
+    const num = parseFloat(text.replace(/,/g, ''));
+    return isNaN(num) ? undefined : num;
   }
 
   /**
    * Check if the post is a repost/share
    */
   private isRepost(container: Element): boolean {
-    if (!this.selectors.repostIndicator) return false
-    return !!container.querySelector(this.selectors.repostIndicator)
+    if (!this.selectors.repostIndicator) return false;
+    return !!container.querySelector(this.selectors.repostIndicator);
   }
 
   /**
    * Check if the post is sponsored/promoted
    */
   private isSponsored(container: Element): boolean {
-    return !!container.querySelector(platformExtraSelectors.sponsoredIndicator)
+    return !!container.querySelector(platformExtraSelectors.sponsoredIndicator);
   }
 
   /**
@@ -267,7 +260,7 @@ export class PlatformNameAdapter implements PlatformAdapter {
    */
   private extractOriginalPost(_container: Element): ExtractedPost['originalPost'] {
     // TODO: Implement original post extraction for reposts
-    return undefined
+    return undefined;
   }
 
   /**
@@ -275,17 +268,17 @@ export class PlatformNameAdapter implements PlatformAdapter {
    */
   private detectContentType(container: Element): ExtractedPost['contentType'] {
     if (container.querySelector(platformExtraSelectors.pollContent)) {
-      return 'poll'
+      return 'poll';
     }
     if (container.querySelector(platformExtraSelectors.videoContent)) {
-      return 'video'
+      return 'video';
     }
     if (container.querySelector(this.selectors.articleShare || '')) {
-      return 'article'
+      return 'article';
     }
     if (container.querySelector(this.selectors.postImage || '')) {
-      return 'image'
+      return 'image';
     }
-    return 'text'
+    return 'text';
   }
 }

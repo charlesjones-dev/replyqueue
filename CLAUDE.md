@@ -9,14 +9,14 @@ ReplyQueue is a Chrome extension (Manifest V3) that helps content creators ident
 ## Commands
 
 ```bash
-npm run dev          # Start dev server with hot reload
-npm run build        # Production build (runs vue-tsc first)
-npm test             # Run all tests once
-npm run test:watch   # Run tests in watch mode
+pnpm dev          # Start dev server with hot reload
+pnpm build        # Production build (runs vue-tsc first)
+pnpm test         # Run all tests once
+pnpm test:watch   # Run tests in watch mode
 ```
 
 **Loading the extension in Chrome:**
-1. Run `npm run build`
+1. Run `pnpm build`
 2. Open `chrome://extensions`
 3. Enable "Developer mode"
 4. Click "Load unpacked" and select the `dist/` directory
@@ -69,10 +69,10 @@ Each adapter implements: `extractPost()`, `getPostUrl()`, `scrollToPost()`, `isF
 Tests in `tests/` mirror `src/` structure. Chrome APIs are mocked in `tests/setup.ts`.
 
 ```bash
-npm test                           # Run all tests
-npm run test:watch                 # Watch mode
-npx vitest tests/background/       # Run specific directory
-npx vitest -t "keyword matching"   # Run tests matching pattern
+pnpm test                           # Run all tests
+pnpm test:watch                     # Watch mode
+pnpm vitest tests/background/       # Run specific directory
+pnpm vitest -t "keyword matching"   # Run tests matching pattern
 ```
 
 ## Code Conventions

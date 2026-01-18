@@ -1,53 +1,50 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed } from 'vue';
 
 const props = defineProps<{
-  comment: string
-  index: number
-}>()
+  comment: string;
+  index: number;
+}>();
 
 const emit = defineEmits<{
-  (e: 'delete', comment: string): void
-  (e: 'update', oldComment: string, newComment: string): void
-}>()
+  (e: 'delete', comment: string): void;
+  (e: 'update', oldComment: string, newComment: string): void;
+}>();
 
-const isEditing = ref(false)
-const editValue = ref('')
+const isEditing = ref(false);
+const editValue = ref('');
 
 const truncatedComment = computed(() => {
-  const maxLength = 100
-  if (props.comment.length <= maxLength) return props.comment
-  return props.comment.slice(0, maxLength) + '...'
-})
+  const maxLength = 100;
+  if (props.comment.length <= maxLength) return props.comment;
+  return props.comment.slice(0, maxLength) + '...';
+});
 
 function startEdit() {
-  editValue.value = props.comment
-  isEditing.value = true
+  editValue.value = props.comment;
+  isEditing.value = true;
 }
 
 function cancelEdit() {
-  isEditing.value = false
-  editValue.value = ''
+  isEditing.value = false;
+  editValue.value = '';
 }
 
 function saveEdit() {
   if (editValue.value.trim() && editValue.value.trim() !== props.comment) {
-    emit('update', props.comment, editValue.value.trim())
+    emit('update', props.comment, editValue.value.trim());
   }
-  isEditing.value = false
-  editValue.value = ''
+  isEditing.value = false;
+  editValue.value = '';
 }
 
 function handleDelete() {
-  emit('delete', props.comment)
+  emit('delete', props.comment);
 }
 </script>
 
 <template>
-  <div
-    class="rounded-md border border-gray-200 bg-gray-50 p-3"
-    :class="{ 'bg-white': isEditing }"
-  >
+  <div class="rounded-md border border-gray-200 bg-gray-50 p-3" :class="{ 'bg-white': isEditing }">
     <!-- Display mode -->
     <div v-if="!isEditing" class="flex items-start justify-between gap-2">
       <div class="flex-1 min-w-0">
@@ -97,11 +94,7 @@ function handleDelete() {
         placeholder="Enter example comment..."
       />
       <div class="flex justify-end gap-2">
-        <button
-          type="button"
-          class="rounded-md px-3 py-1 text-sm text-gray-600 hover:bg-gray-100"
-          @click="cancelEdit"
-        >
+        <button type="button" class="rounded-md px-3 py-1 text-sm text-gray-600 hover:bg-gray-100" @click="cancelEdit">
           Cancel
         </button>
         <button

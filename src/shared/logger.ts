@@ -13,13 +13,13 @@
  *   logger.error('error')            // Always logged
  */
 
-const IS_DEV = import.meta.env?.DEV ?? process.env.NODE_ENV !== 'production'
+const IS_DEV = import.meta.env?.DEV ?? process.env.NODE_ENV !== 'production';
 
 export interface Logger {
-  debug: (...args: unknown[]) => void
-  log: (...args: unknown[]) => void
-  warn: (...args: unknown[]) => void
-  error: (...args: unknown[]) => void
+  debug: (...args: unknown[]) => void;
+  log: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
 }
 
 /**
@@ -27,13 +27,11 @@ export interface Logger {
  * @param component - Component name for the log prefix
  */
 export function createLogger(component: string): Logger {
-  const prefix = `[ReplyQueue:${component}]`
+  const prefix = `[ReplyQueue:${component}]`;
 
   return {
     // Debug logs are stripped in production
-    debug: IS_DEV
-      ? (...args: unknown[]) => console.debug(prefix, ...args)
-      : () => {},
+    debug: IS_DEV ? (...args: unknown[]) => console.debug(prefix, ...args) : () => {},
 
     // Info logs are kept for debugging user issues
     log: (...args: unknown[]) => console.log(prefix, ...args),
@@ -43,10 +41,10 @@ export function createLogger(component: string): Logger {
 
     // Errors are always logged
     error: (...args: unknown[]) => console.error(prefix, ...args),
-  }
+  };
 }
 
 /**
  * Global logger for shared utilities
  */
-export const logger = createLogger('Shared')
+export const logger = createLogger('Shared');

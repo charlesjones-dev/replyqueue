@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useSettingsView } from '../composables/useSettingsView'
-import ApiKeyInput from '../components/ApiKeyInput.vue'
-import ExampleCommentsList from '../components/ExampleCommentsList.vue'
-import { RECOMMENDED_MODELS } from '@shared/constants'
+import { useSettingsView } from '../composables/useSettingsView';
+import ApiKeyInput from '../components/ApiKeyInput.vue';
+import ExampleCommentsList from '../components/ExampleCommentsList.vue';
+import { RECOMMENDED_MODELS } from '@shared/constants';
 
 const {
   // Form state
@@ -54,41 +54,24 @@ const {
   addExample,
   removeExample,
   updateExample,
-} = useSettingsView()
+} = useSettingsView();
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Loading overlay -->
-    <div
-      v-if="isLoading"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 bg-opacity-75"
-    >
+    <div v-if="isLoading" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 bg-opacity-75">
       <div class="flex items-center gap-2">
         <svg class="h-5 w-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          />
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-          />
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
         <span class="text-gray-600">Loading settings...</span>
       </div>
     </div>
 
     <!-- Unsaved changes warning modal -->
-    <div
-      v-if="showUnsavedWarning"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-    >
+    <div v-if="showUnsavedWarning" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div class="mx-4 max-w-sm rounded-lg bg-white p-6 shadow-xl">
         <h3 class="mb-2 text-lg font-medium text-gray-900">Unsaved Changes</h3>
         <p class="mb-4 text-sm text-gray-600">
@@ -124,20 +107,12 @@ const {
               @click="handleBack"
             >
               <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 19l-7-7 7-7"
-                />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <h1 class="text-xl font-bold text-gray-900">Settings</h1>
           </div>
-          <span
-            v-if="hasUnsavedChanges"
-            class="rounded-full bg-yellow-100 px-2 py-1 text-xs text-yellow-700"
-          >
+          <span v-if="hasUnsavedChanges" class="rounded-full bg-yellow-100 px-2 py-1 text-xs text-yellow-700">
             Unsaved changes
           </span>
         </div>
@@ -149,17 +124,9 @@ const {
             <h2 class="mb-3 text-sm font-medium text-gray-900">API Key</h2>
             <div class="space-y-3">
               <div>
-                <label class="mb-1 block text-xs text-gray-500">
-                  OpenRouter API Key
-                </label>
-                <ApiKeyInput
-                  v-model="apiKey"
-                  :disabled="isTestingApiKey"
-                  :error="apiKeyError ?? undefined"
-                />
-                <p v-if="apiKeyValid" class="mt-1 text-xs text-green-600">
-                  API key validated successfully
-                </p>
+                <label class="mb-1 block text-xs text-gray-500"> OpenRouter API Key </label>
+                <ApiKeyInput v-model="apiKey" :disabled="isTestingApiKey" :error="apiKeyError ?? undefined" />
+                <p v-if="apiKeyValid" class="mt-1 text-xs text-green-600">API key validated successfully</p>
                 <p v-if="apiKeyError" class="mt-1 text-xs text-red-600">
                   {{ apiKeyError }}
                 </p>
@@ -172,19 +139,8 @@ const {
               >
                 <span v-if="isTestingApiKey" class="flex items-center justify-center">
                   <svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    />
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                   Testing...
                 </span>
@@ -198,9 +154,7 @@ const {
             <h2 class="mb-3 text-sm font-medium text-gray-900">RSS Feed</h2>
             <div class="space-y-3">
               <div>
-                <label class="mb-1 block text-xs text-gray-500">
-                  Feed URL
-                </label>
+                <label class="mb-1 block text-xs text-gray-500"> Feed URL </label>
                 <input
                   v-model="rssFeedUrl"
                   type="url"
@@ -212,12 +166,8 @@ const {
                   }"
                 />
                 <div v-if="feedValid" class="mt-1">
-                  <p class="text-xs text-green-600">
-                    Feed validated: {{ feedTitle }}
-                  </p>
-                  <p class="text-xs text-gray-500">
-                    {{ feedItemCount }} items found
-                  </p>
+                  <p class="text-xs text-green-600">Feed validated: {{ feedTitle }}</p>
+                  <p class="text-xs text-gray-500">{{ feedItemCount }} items found</p>
                 </div>
                 <p v-if="feedError" class="mt-1 text-xs text-red-600">
                   {{ feedError }}
@@ -231,19 +181,8 @@ const {
               >
                 <span v-if="isTestingFeed" class="flex items-center justify-center">
                   <svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    />
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                   Testing...
                 </span>
@@ -256,18 +195,12 @@ const {
           <section class="rounded-lg bg-white p-4 shadow">
             <h2 class="mb-3 text-sm font-medium text-gray-900">AI Model</h2>
             <div>
-              <label class="mb-1 block text-xs text-gray-500">
-                Selected Model
-              </label>
+              <label class="mb-1 block text-xs text-gray-500"> Selected Model </label>
               <select
                 v-model="selectedModel"
                 class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
               >
-                <option
-                  v-for="model in RECOMMENDED_MODELS"
-                  :key="model"
-                  :value="model"
-                >
+                <option v-for="model in RECOMMENDED_MODELS" :key="model" :value="model">
                   {{ model }}
                 </option>
               </select>
@@ -285,9 +218,7 @@ const {
               <div>
                 <div class="mb-1 flex items-center justify-between">
                   <label class="text-xs text-gray-500">Relevance Threshold</label>
-                  <span class="text-xs font-medium text-gray-700">
-                    {{ Math.round(threshold * 100) }}%
-                  </span>
+                  <span class="text-xs font-medium text-gray-700"> {{ Math.round(threshold * 100) }}% </span>
                 </div>
                 <input
                   v-model.number="threshold"
@@ -297,50 +228,30 @@ const {
                   step="0.1"
                   class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200"
                 />
-                <p class="mt-1 text-xs text-gray-500">
-                  Posts below this score will be filtered out.
-                </p>
+                <p class="mt-1 text-xs text-gray-500">Posts below this score will be filtered out.</p>
               </div>
 
               <!-- Max posts dropdown -->
               <div>
-                <label class="mb-1 block text-xs text-gray-500">
-                  Max Posts to Show
-                </label>
+                <label class="mb-1 block text-xs text-gray-500"> Max Posts to Show </label>
                 <select
                   v-model.number="maxPosts"
                   class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
-                  <option
-                    v-for="option in maxPostsOptions"
-                    :key="option"
-                    :value="option"
-                  >
-                    {{ option }} posts
-                  </option>
+                  <option v-for="option in maxPostsOptions" :key="option" :value="option">{{ option }} posts</option>
                 </select>
               </div>
 
               <!-- Cache TTL dropdown -->
               <div>
-                <label class="mb-1 block text-xs text-gray-500">
-                  RSS Cache Duration
-                </label>
+                <label class="mb-1 block text-xs text-gray-500"> RSS Cache Duration </label>
                 <select
                   v-model.number="cacheTtlMinutes"
                   class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 >
-                  <option
-                    v-for="option in cacheTtlOptions"
-                    :key="option"
-                    :value="option"
-                  >
-                    {{ option }} minutes
-                  </option>
+                  <option v-for="option in cacheTtlOptions" :key="option" :value="option">{{ option }} minutes</option>
                 </select>
-                <p class="mt-1 text-xs text-gray-500">
-                  How long to cache the RSS feed before refreshing.
-                </p>
+                <p class="mt-1 text-xs text-gray-500">How long to cache the RSS feed before refreshing.</p>
               </div>
             </div>
           </section>
@@ -359,9 +270,7 @@ const {
           <section class="rounded-lg bg-white p-4 shadow">
             <h2 class="mb-3 text-sm font-medium text-gray-900">Communication Preferences</h2>
             <div>
-              <label class="mb-1 block text-xs text-gray-500">
-                Writing Rules for AI-Generated Replies
-              </label>
+              <label class="mb-1 block text-xs text-gray-500"> Writing Rules for AI-Generated Replies </label>
               <textarea
                 v-model="communicationPreferences"
                 rows="4"
@@ -391,25 +300,9 @@ Example:
               :disabled="isClearingCache"
               @click="clearCache"
             >
-              <svg
-                v-if="isClearingCache"
-                class="h-4 w-4 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                />
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
+              <svg v-if="isClearingCache" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
               </svg>
               <svg
                 v-else-if="cacheCleared"
@@ -418,20 +311,9 @@ Example:
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
-              <svg
-                v-else
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -468,19 +350,8 @@ Example:
             >
               <span v-if="isSaving" class="flex items-center justify-center">
                 <svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  />
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
                 Saving...
               </span>

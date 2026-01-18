@@ -1,27 +1,27 @@
-import { ref, readonly } from 'vue'
-import type { ExtensionConfig } from '@shared/types'
-import { getConfig, saveConfig, updateConfig } from '@shared/storage'
-import { DEFAULT_CONFIG } from '@shared/constants'
+import { ref, readonly } from 'vue';
+import type { ExtensionConfig } from '@shared/types';
+import { getConfig, saveConfig, updateConfig } from '@shared/storage';
+import { DEFAULT_CONFIG } from '@shared/constants';
 
-const config = ref<ExtensionConfig>({ ...DEFAULT_CONFIG })
-const isLoading = ref(false)
-const error = ref<string | null>(null)
+const config = ref<ExtensionConfig>({ ...DEFAULT_CONFIG });
+const isLoading = ref(false);
+const error = ref<string | null>(null);
 
 export function useConfig() {
   /**
    * Load configuration from storage
    */
   async function loadConfig(): Promise<ExtensionConfig> {
-    isLoading.value = true
-    error.value = null
+    isLoading.value = true;
+    error.value = null;
     try {
-      config.value = await getConfig()
-      return config.value
+      config.value = await getConfig();
+      return config.value;
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to load config'
-      throw e
+      error.value = e instanceof Error ? e.message : 'Failed to load config';
+      throw e;
     } finally {
-      isLoading.value = false
+      isLoading.value = false;
     }
   }
 
@@ -29,16 +29,16 @@ export function useConfig() {
    * Save complete configuration
    */
   async function save(newConfig: ExtensionConfig): Promise<void> {
-    isLoading.value = true
-    error.value = null
+    isLoading.value = true;
+    error.value = null;
     try {
-      await saveConfig(newConfig)
-      config.value = newConfig
+      await saveConfig(newConfig);
+      config.value = newConfig;
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to save config'
-      throw e
+      error.value = e instanceof Error ? e.message : 'Failed to save config';
+      throw e;
     } finally {
-      isLoading.value = false
+      isLoading.value = false;
     }
   }
 
@@ -46,15 +46,15 @@ export function useConfig() {
    * Update partial configuration
    */
   async function update(updates: Partial<ExtensionConfig>): Promise<void> {
-    isLoading.value = true
-    error.value = null
+    isLoading.value = true;
+    error.value = null;
     try {
-      config.value = await updateConfig(updates)
+      config.value = await updateConfig(updates);
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to update config'
-      throw e
+      error.value = e instanceof Error ? e.message : 'Failed to update config';
+      throw e;
     } finally {
-      isLoading.value = false
+      isLoading.value = false;
     }
   }
 
@@ -62,28 +62,28 @@ export function useConfig() {
    * Update API key
    */
   async function setApiKey(apiKey: string): Promise<void> {
-    await update({ apiKey })
+    await update({ apiKey });
   }
 
   /**
    * Update RSS feed URL
    */
   async function setRssFeedUrl(rssFeedUrl: string): Promise<void> {
-    await update({ rssFeedUrl })
+    await update({ rssFeedUrl });
   }
 
   /**
    * Update selected model
    */
   async function setSelectedModel(selectedModel: string): Promise<void> {
-    await update({ selectedModel })
+    await update({ selectedModel });
   }
 
   /**
    * Mark setup as complete
    */
   async function markSetupComplete(): Promise<void> {
-    await update({ isSetupComplete: true })
+    await update({ isSetupComplete: true });
   }
 
   return {
@@ -97,5 +97,5 @@ export function useConfig() {
     setRssFeedUrl,
     setSelectedModel,
     markSetupComplete,
-  }
+  };
 }

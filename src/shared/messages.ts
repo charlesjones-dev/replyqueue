@@ -2,8 +2,8 @@
  * Message passing types for content/background communication
  */
 
-import type { ExtractedPost } from '../platforms/types'
-import type { ExtensionConfig } from './types'
+import type { ExtractedPost } from '../platforms/types';
+import type { ExtensionConfig } from './types';
 
 export type MessageType =
   | 'FETCH_RSS'
@@ -26,10 +26,10 @@ export type MessageType =
   | 'AI_MATCH_POSTS'
   | 'GENERATE_SUGGESTIONS'
   | 'REGENERATE_SUGGESTIONS'
-  | 'HEAT_CHECK_POSTS'
+  | 'HEAT_CHECK_POSTS';
 
 export interface BaseMessage {
-  type: MessageType
+  type: MessageType;
 }
 
 // ============================================================
@@ -37,38 +37,38 @@ export interface BaseMessage {
 // ============================================================
 
 export interface FetchRssMessage extends BaseMessage {
-  type: 'FETCH_RSS'
-  url: string
+  type: 'FETCH_RSS';
+  url: string;
 }
 
 export interface ValidateRssFeedMessage extends BaseMessage {
-  type: 'VALIDATE_RSS_FEED'
-  url: string
+  type: 'VALIDATE_RSS_FEED';
+  url: string;
 }
 
 export interface GenerateReplyMessage extends BaseMessage {
-  type: 'GENERATE_REPLY'
-  postContent: string
-  postAuthor: string
+  type: 'GENERATE_REPLY';
+  postContent: string;
+  postAuthor: string;
 }
 
 export interface PostReplyMessage extends BaseMessage {
-  type: 'POST_REPLY'
-  reply: string
-  postUrl: string
+  type: 'POST_REPLY';
+  reply: string;
+  postUrl: string;
 }
 
 export interface GetConfigMessage extends BaseMessage {
-  type: 'GET_CONFIG'
+  type: 'GET_CONFIG';
 }
 
 export interface SaveConfigMessage extends BaseMessage {
-  type: 'SAVE_CONFIG'
-  config: Partial<ExtensionConfig>
+  type: 'SAVE_CONFIG';
+  config: Partial<ExtensionConfig>;
 }
 
 export interface OpenSidePanelMessage extends BaseMessage {
-  type: 'OPEN_SIDE_PANEL'
+  type: 'OPEN_SIDE_PANEL';
 }
 
 // ============================================================
@@ -79,27 +79,27 @@ export interface OpenSidePanelMessage extends BaseMessage {
  * Message sent when posts are extracted from the feed
  */
 export interface PostsExtractedMessage extends BaseMessage {
-  type: 'POSTS_EXTRACTED'
-  posts: ExtractedPost[]
-  platform: string
-  pageUrl: string
+  type: 'POSTS_EXTRACTED';
+  posts: ExtractedPost[];
+  platform: string;
+  pageUrl: string;
 }
 
 /**
  * Message sent when content script initializes
  */
 export interface ContentScriptReadyMessage extends BaseMessage {
-  type: 'CONTENT_SCRIPT_READY'
-  platform: string
-  pageUrl: string
-  isFeedPage: boolean
+  type: 'CONTENT_SCRIPT_READY';
+  platform: string;
+  pageUrl: string;
+  isFeedPage: boolean;
 }
 
 /**
  * Request current extraction status
  */
 export interface GetExtractionStatusMessage extends BaseMessage {
-  type: 'GET_EXTRACTION_STATUS'
+  type: 'GET_EXTRACTION_STATUS';
 }
 
 // ============================================================
@@ -110,22 +110,22 @@ export interface GetExtractionStatusMessage extends BaseMessage {
  * Command to start extracting posts
  */
 export interface StartExtractionMessage extends BaseMessage {
-  type: 'START_EXTRACTION'
+  type: 'START_EXTRACTION';
 }
 
 /**
  * Command to stop extracting posts
  */
 export interface StopExtractionMessage extends BaseMessage {
-  type: 'STOP_EXTRACTION'
+  type: 'STOP_EXTRACTION';
 }
 
 /**
  * Command to scroll to a specific post
  */
 export interface ScrollToPostMessage extends BaseMessage {
-  type: 'SCROLL_TO_POST'
-  postId: string
+  type: 'SCROLL_TO_POST';
+  postId: string;
 }
 
 // ============================================================
@@ -136,40 +136,40 @@ export interface ScrollToPostMessage extends BaseMessage {
  * Fetch available models from OpenRouter
  */
 export interface FetchModelsMessage extends BaseMessage {
-  type: 'FETCH_MODELS'
-  forceRefresh?: boolean
+  type: 'FETCH_MODELS';
+  forceRefresh?: boolean;
 }
 
 /**
  * Request AI matching for posts
  */
 export interface AIMatchPostsMessage extends BaseMessage {
-  type: 'AI_MATCH_POSTS'
+  type: 'AI_MATCH_POSTS';
 }
 
 /**
  * Generate reply suggestions for a specific post
  */
 export interface GenerateSuggestionsMessage extends BaseMessage {
-  type: 'GENERATE_SUGGESTIONS'
-  postId: string
-  platform: string
+  type: 'GENERATE_SUGGESTIONS';
+  postId: string;
+  platform: string;
 }
 
 /**
  * Regenerate reply suggestions for a specific post
  */
 export interface RegenerateSuggestionsMessage extends BaseMessage {
-  type: 'REGENERATE_SUGGESTIONS'
-  postId: string
-  platform: string
+  type: 'REGENERATE_SUGGESTIONS';
+  postId: string;
+  platform: string;
 }
 
 /**
  * Run heat check (tone/sentiment analysis) on matched posts
  */
 export interface HeatCheckPostsMessage extends BaseMessage {
-  type: 'HEAT_CHECK_POSTS'
+  type: 'HEAT_CHECK_POSTS';
 }
 
 // ============================================================
@@ -194,33 +194,33 @@ export type ExtensionMessage =
   | AIMatchPostsMessage
   | GenerateSuggestionsMessage
   | RegenerateSuggestionsMessage
-  | HeatCheckPostsMessage
+  | HeatCheckPostsMessage;
 
 // ============================================================
 // Response types
 // ============================================================
 
 export interface MessageResponse<T = unknown> {
-  success: boolean
-  data?: T
-  error?: string
+  success: boolean;
+  data?: T;
+  error?: string;
   /** Additional error data for specific error types */
   errorData?: {
-    requestedTokens?: number
-    availableTokens?: number
-  }
+    requestedTokens?: number;
+    availableTokens?: number;
+  };
 }
 
 export interface ExtractionStatusResponse {
-  isExtracting: boolean
-  extractedCount: number
-  platform: string
+  isExtracting: boolean;
+  extractedCount: number;
+  platform: string;
 }
 
 export interface PostsStoredResponse {
-  storedCount: number
-  duplicateCount: number
-  totalStored: number
+  storedCount: number;
+  duplicateCount: number;
+  totalStored: number;
 }
 
 // ============================================================
@@ -230,15 +230,13 @@ export interface PostsStoredResponse {
 /**
  * Send a message to the background script
  */
-export async function sendMessage<T = unknown>(
-  message: ExtensionMessage
-): Promise<MessageResponse<T>> {
+export async function sendMessage<T = unknown>(message: ExtensionMessage): Promise<MessageResponse<T>> {
   try {
-    const response = await chrome.runtime.sendMessage(message)
-    return response as MessageResponse<T>
+    const response = await chrome.runtime.sendMessage(message);
+    return response as MessageResponse<T>;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: errorMessage }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -250,11 +248,11 @@ export async function sendTabMessage<T = unknown>(
   message: ExtensionMessage
 ): Promise<MessageResponse<T>> {
   try {
-    const response = await chrome.tabs.sendMessage(tabId, message)
-    return response as MessageResponse<T>
+    const response = await chrome.tabs.sendMessage(tabId, message);
+    return response as MessageResponse<T>;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    return { success: false, error: errorMessage }
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -262,19 +260,19 @@ export async function sendTabMessage<T = unknown>(
  * Type guard for PostsExtractedMessage
  */
 export function isPostsExtractedMessage(message: ExtensionMessage): message is PostsExtractedMessage {
-  return message.type === 'POSTS_EXTRACTED'
+  return message.type === 'POSTS_EXTRACTED';
 }
 
 /**
  * Type guard for ContentScriptReadyMessage
  */
 export function isContentScriptReadyMessage(message: ExtensionMessage): message is ContentScriptReadyMessage {
-  return message.type === 'CONTENT_SCRIPT_READY'
+  return message.type === 'CONTENT_SCRIPT_READY';
 }
 
 /**
  * Type guard for ScrollToPostMessage
  */
 export function isScrollToPostMessage(message: ExtensionMessage): message is ScrollToPostMessage {
-  return message.type === 'SCROLL_TO_POST'
+  return message.type === 'SCROLL_TO_POST';
 }

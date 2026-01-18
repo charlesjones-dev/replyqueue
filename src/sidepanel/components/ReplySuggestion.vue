@@ -1,33 +1,31 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { ReplySuggestion } from '@shared/types'
-import { useClipboard } from '../composables/useClipboard'
+import { computed } from 'vue';
+import type { ReplySuggestion } from '@shared/types';
+import { useClipboard } from '../composables/useClipboard';
 
 const props = defineProps<{
-  suggestion: ReplySuggestion
-  isFirst?: boolean
-}>()
+  suggestion: ReplySuggestion;
+  isFirst?: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'copied', id: string): void
-}>()
+  (e: 'copied', id: string): void;
+}>();
 
-const { copyToClipboard, wasCopied } = useClipboard()
+const { copyToClipboard, wasCopied } = useClipboard();
 
-const isCopied = computed(() => wasCopied(props.suggestion.id))
+const isCopied = computed(() => wasCopied(props.suggestion.id));
 
 async function handleCopy() {
-  const success = await copyToClipboard(props.suggestion.text, props.suggestion.id)
+  const success = await copyToClipboard(props.suggestion.text, props.suggestion.id);
   if (success) {
-    emit('copied', props.suggestion.id)
+    emit('copied', props.suggestion.id);
   }
 }
 </script>
 
 <template>
-  <div
-    class="group rounded-md border border-gray-200 bg-gray-50 p-3 transition-colors hover:border-gray-300"
-  >
+  <div class="group rounded-md border border-gray-200 bg-gray-50 p-3 transition-colors hover:border-gray-300">
     <!-- Suggestion text -->
     <p class="text-sm text-gray-700 whitespace-pre-wrap">
       {{ suggestion.text }}
@@ -38,11 +36,7 @@ async function handleCopy() {
       <button
         type="button"
         class="flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors"
-        :class="
-          isCopied
-            ? 'bg-green-100 text-green-700'
-            : 'bg-white text-gray-600 hover:bg-gray-100'
-        "
+        :class="isCopied ? 'bg-green-100 text-green-700' : 'bg-white text-gray-600 hover:bg-gray-100'"
         @click="handleCopy"
       >
         <template v-if="isCopied">

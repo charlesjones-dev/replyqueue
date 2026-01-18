@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed } from 'vue';
 
 const props = defineProps<{
-  rssFeedConnected: boolean
-  rssFeedMessage: string
-  extractedPostCount: number
-  matchedPostCount: number
-  isRefreshing?: boolean
-}>()
+  rssFeedConnected: boolean;
+  rssFeedMessage: string;
+  extractedPostCount: number;
+  matchedPostCount: number;
+  isRefreshing?: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'refresh'): void
-}>()
+  (e: 'refresh'): void;
+}>();
 
 const statusColor = computed(() => {
-  return props.rssFeedConnected ? 'bg-green-400' : 'bg-yellow-400'
-})
+  return props.rssFeedConnected ? 'bg-green-400' : 'bg-yellow-400';
+});
 </script>
 
 <template>
@@ -23,14 +23,8 @@ const statusColor = computed(() => {
     <!-- RSS Status -->
     <div class="flex items-center gap-2">
       <span class="relative flex h-2 w-2">
-        <span
-          class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-          :class="statusColor"
-        />
-        <span
-          class="relative inline-flex h-2 w-2 rounded-full"
-          :class="statusColor"
-        />
+        <span class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" :class="statusColor" />
+        <span class="relative inline-flex h-2 w-2 rounded-full" :class="statusColor" />
       </span>
       <span class="text-gray-600">{{ rssFeedMessage }}</span>
     </div>
@@ -50,12 +44,7 @@ const statusColor = computed(() => {
       </span>
       <span class="text-gray-500" title="Matched posts">
         <svg class="mr-1 inline h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M5 13l4 4L19 7"
-          />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
         </svg>
         {{ matchedPostCount }}
       </span>

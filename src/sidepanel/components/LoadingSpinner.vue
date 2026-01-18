@@ -1,21 +1,21 @@
 <script setup lang="ts">
 defineProps<{
-  size?: 'sm' | 'md' | 'lg'
-  color?: 'blue' | 'gray' | 'white'
-  label?: string
-}>()
+  size?: 'sm' | 'md' | 'lg';
+  color?: 'blue' | 'gray' | 'white';
+  label?: string;
+}>();
 
 const sizeClasses = {
   sm: 'h-4 w-4',
   md: 'h-5 w-5',
   lg: 'h-8 w-8',
-}
+};
 
 const colorClasses = {
   blue: 'text-blue-600',
   gray: 'text-gray-400',
   white: 'text-white',
-}
+};
 </script>
 
 <template>
@@ -26,14 +26,7 @@ const colorClasses = {
       fill="none"
       viewBox="0 0 24 24"
     >
-      <circle
-        class="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        stroke-width="4"
-      />
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
       <path
         class="opacity-75"
         fill="currentColor"

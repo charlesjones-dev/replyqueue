@@ -8,11 +8,7 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": [
-    "storage",
-    "sidePanel",
-    "activeTab"
-  ],
+  "permissions": ["storage", "sidePanel", "activeTab"],
   "host_permissions": [
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",

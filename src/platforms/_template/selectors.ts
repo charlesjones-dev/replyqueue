@@ -13,7 +13,7 @@
  * - Include version/date comments for when selectors were last verified
  */
 
-import type { FeedSelectors } from '../types'
+import type { FeedSelectors } from '../types';
 
 /**
  * DOM selectors for [PLATFORM_NAME]
@@ -110,7 +110,7 @@ export const platformSelectors: FeedSelectors = {
    * Element containing or linked to the post's permanent URL
    */
   postLink: '[TODO: selector for post permalink]',
-}
+};
 
 /**
  * Additional platform-specific selectors
@@ -127,7 +127,7 @@ export const platformExtraSelectors = {
   pollContent: '[TODO: selector for polls]',
 
   // Add more platform-specific selectors as needed
-}
+};
 
 /**
  * Data attributes used by the platform
@@ -141,7 +141,7 @@ export const platformDataAttributes = {
   postIdPattern: /post-(\d+)/,
 
   // Add more data attribute patterns as needed
-}
+};
 
 /**
  * URL patterns for the platform
@@ -159,4 +159,4 @@ export const platformUrlPatterns = {
 
   // Post permalink format (for generating URLs)
   postPermalink: 'https://www.example.com/post/',
-}
+};

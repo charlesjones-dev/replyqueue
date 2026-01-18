@@ -4,7 +4,7 @@
  * Note: LinkedIn frequently changes their DOM structure, so these may need updates
  */
 
-import type { FeedSelectors } from '../types'
+import type { FeedSelectors } from '../types';
 
 /**
  * LinkedIn-specific DOM selectors
@@ -21,22 +21,29 @@ export const linkedInSelectors: FeedSelectors = {
 
   // Author information
   // LinkedIn uses update-components-actor for author info section
-  authorName: '.update-components-actor__name .visually-hidden, .update-components-actor__title .visually-hidden, .update-components-actor__name span[aria-hidden="true"], .update-components-actor__title span[dir="ltr"]',
+  authorName:
+    '.update-components-actor__name .visually-hidden, .update-components-actor__title .visually-hidden, .update-components-actor__name span[aria-hidden="true"], .update-components-actor__title span[dir="ltr"]',
 
-  authorHeadline: '.update-components-actor__description, .update-components-actor__subtitle, .update-components-actor__sub-description',
+  authorHeadline:
+    '.update-components-actor__description, .update-components-actor__subtitle, .update-components-actor__sub-description',
 
-  authorProfileLink: '.update-components-actor__container-link, .update-components-actor__image a, .update-components-actor a[href*="/in/"]',
+  authorProfileLink:
+    '.update-components-actor__container-link, .update-components-actor__image a, .update-components-actor a[href*="/in/"]',
 
   // Post content - LinkedIn wraps content in different ways
-  postContent: '.update-components-text, .feed-shared-update-v2__description, .feed-shared-text, .feed-shared-inline-show-more-text, .break-words',
+  postContent:
+    '.update-components-text, .feed-shared-update-v2__description, .feed-shared-text, .feed-shared-inline-show-more-text, .break-words',
 
   // Timestamp - LinkedIn shows relative time
-  postTimestamp: '.update-components-actor__sub-description time, .feed-shared-actor__sub-description time, time.visually-hidden',
+  postTimestamp:
+    '.update-components-actor__sub-description time, .feed-shared-actor__sub-description time, time.visually-hidden',
 
   // Engagement metrics - social counts are in social-details-social-counts
-  reactionCount: '.social-details-social-counts__reactions-count, .social-details-social-counts__count-value, button[aria-label*="reaction"] span',
+  reactionCount:
+    '.social-details-social-counts__reactions-count, .social-details-social-counts__count-value, button[aria-label*="reaction"] span',
 
-  commentCount: '.social-details-social-counts__comments, button[aria-label*="comment"] span.social-details-social-counts__count-value',
+  commentCount:
+    '.social-details-social-counts__comments, button[aria-label*="comment"] span.social-details-social-counts__count-value',
 
   repostCount: '.social-details-social-counts__item--repost, button[aria-label*="repost"] span',
 
@@ -50,8 +57,9 @@ export const linkedInSelectors: FeedSelectors = {
   postImage: '.update-components-image, .feed-shared-image, .feed-shared-carousel',
 
   // Post link/actions - for getting permalink
-  postLink: '.feed-shared-control-menu, .update-components-update-v2__control-menu, button[aria-label*="Open control menu"]',
-}
+  postLink:
+    '.feed-shared-control-menu, .update-components-update-v2__control-menu, button[aria-label*="Open control menu"]',
+};
 
 /**
  * Additional LinkedIn-specific selectors for edge cases
@@ -73,10 +81,12 @@ export const linkedInExtraSelectors = {
   sponsoredIndicator: '.feed-shared-actor__sub-description--sponsored, .update-components-actor__sponsored',
 
   // Original poster in repost
-  originalPoster: '.update-components-mini-update-v2 .update-components-actor__name, .feed-shared-update-v2__reshare .update-components-actor__name',
+  originalPoster:
+    '.update-components-mini-update-v2 .update-components-actor__name, .feed-shared-update-v2__reshare .update-components-actor__name',
 
   // Original content in repost
-  originalContent: '.update-components-mini-update-v2 .update-components-text, .feed-shared-update-v2__reshare .update-components-text',
+  originalContent:
+    '.update-components-mini-update-v2 .update-components-text, .feed-shared-update-v2__reshare .update-components-text',
 
   // Comment button for interaction
   commentButton: 'button[aria-label*="Comment"], .comment-button, .social-actions-button[data-control-name="comment"]',
@@ -86,7 +96,7 @@ export const linkedInExtraSelectors = {
 
   // Like button
   likeButton: 'button[aria-label*="Like"], .react-button, .social-actions-button[data-control-name="react"]',
-}
+};
 
 /**
  * Data attribute patterns for extracting post IDs
@@ -103,7 +113,7 @@ export const linkedInDataAttributes = {
 
   // Profile URN pattern
   profileUrnPattern: /urn:li:fs_miniProfile:([A-Za-z0-9_-]+)/,
-}
+};
 
 /**
  * URL patterns for LinkedIn
@@ -123,4 +133,4 @@ export const linkedInUrlPatterns = {
 
   // Post permalink format
   postPermalink: 'https://www.linkedin.com/feed/update/',
-}
+};

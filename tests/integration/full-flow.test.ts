@@ -3,8 +3,8 @@
  * Tests the full flow: setup -> extraction -> matching -> display
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { clearMockStorage, setMockStorage } from '../setup'
+import { describe, it, expect, beforeEach } from 'vitest';
+import { clearMockStorage, setMockStorage } from '../setup';
 import {
   getConfig,
   updateConfig,
@@ -15,49 +15,49 @@ import {
   getCachedRssFeed,
   getExtractedPosts,
   addExtractedPosts,
-} from '@shared/storage'
-import { STORAGE_KEYS } from '@shared/constants'
-import type { MatchedPostWithScore, ExtractedPostRecord, CachedRssFeed } from '@shared/types'
+} from '@shared/storage';
+import { STORAGE_KEYS } from '@shared/constants';
+import type { MatchedPostWithScore, ExtractedPostRecord, CachedRssFeed } from '@shared/types';
 
 describe('Full Flow Integration Tests', () => {
   beforeEach(() => {
-    clearMockStorage()
-    vi.clearAllMocks()
-  })
+    clearMockStorage();
+    vi.clearAllMocks();
+  });
 
   describe('Setup Flow', () => {
     it('should start with default config when no setup is complete', async () => {
-      const config = await getConfig()
+      const config = await getConfig();
 
-      expect(config.isSetupComplete).toBe(false)
-      expect(config.apiKey).toBe('')
-      expect(config.rssFeedUrl).toBe('')
-    })
+      expect(config.isSetupComplete).toBe(false);
+      expect(config.apiKey).toBe('');
+      expect(config.rssFeedUrl).toBe('');
+    });
 
     it('should properly save setup configuration', async () => {
       await updateConfig({
         apiKey: 'sk-or-v1-test-api-key',
         rssFeedUrl: 'https://example.com/feed.xml',
         isSetupComplete: true,
-      })
+      });
 
-      const config = await getConfig()
+      const config = await getConfig();
 
-      expect(config.isSetupComplete).toBe(true)
-      expect(config.apiKey).toBe('sk-or-v1-test-api-key')
-      expect(config.rssFeedUrl).toBe('https://example.com/feed.xml')
-    })
+      expect(config.isSetupComplete).toBe(true);
+      expect(config.apiKey).toBe('sk-or-v1-test-api-key');
+      expect(config.rssFeedUrl).toBe('https://example.com/feed.xml');
+    });
 
     it('should preserve model selection through setup', async () => {
       await updateConfig({
         selectedModel: 'anthropic/claude-sonnet-4.5',
         isSetupComplete: true,
-      })
+      });
 
-      const config = await getConfig()
-      expect(config.selectedModel).toBe('anthropic/claude-sonnet-4.5')
-    })
-  })
+      const config = await getConfig();
+      expect(config.selectedModel).toBe('anthropic/claude-sonnet-4.5');
+    });
+  });
 
   describe('Post Storage Flow', () => {
     it('should store extracted posts with deduplication', async () => {
@@ -80,21 +80,21 @@ describe('Full Flow Integration Tests', () => {
           extractedAt: Date.now(),
           sourcePageUrl: 'https://linkedin.com/feed',
         },
-      ]
+      ];
 
-      const result = await addExtractedPosts(posts)
+      const result = await addExtractedPosts(posts);
 
-      expect(result.added).toBe(2)
-      expect(result.duplicates).toBe(0)
-      expect(result.total).toBe(2)
+      expect(result.added).toBe(2);
+      expect(result.duplicates).toBe(0);
+      expect(result.total).toBe(2);
 
       // Try to add duplicates
-      const result2 = await addExtractedPosts([posts[0]])
+      const result2 = await addExtractedPosts([posts[0]]);
 
-      expect(result2.added).toBe(0)
-      expect(result2.duplicates).toBe(1)
-      expect(result2.total).toBe(2)
-    })
+      expect(result2.added).toBe(0);
+      expect(result2.duplicates).toBe(1);
+      expect(result2.total).toBe(2);
+    });
 
     it('should store matched posts with scores', async () => {
       const matchedPosts: MatchedPostWithScore[] = [
@@ -130,21 +130,21 @@ describe('Full Flow Integration Tests', () => {
           matchedAt: Date.now(),
           status: 'pending',
         },
-      ]
+      ];
 
-      await saveMatchedPostsWithScore(matchedPosts)
-      const retrieved = await getMatchedPostsWithScore()
+      await saveMatchedPostsWithScore(matchedPosts);
+      const retrieved = await getMatchedPostsWithScore();
 
-      expect(retrieved).toHaveLength(2)
+      expect(retrieved).toHaveLength(2);
       // Should be sorted by score descending
-      expect(retrieved[0].score).toBeGreaterThanOrEqual(retrieved[1].score)
-    })
-  })
+      expect(retrieved[0].score).toBeGreaterThanOrEqual(retrieved[1].score);
+    });
+  });
 
   describe('Settings Changes Flow', () => {
     it('should properly update matching preferences', async () => {
-      const initialConfig = await getConfig()
-      expect(initialConfig.matchingPreferences?.threshold).toBe(0.3)
+      const initialConfig = await getConfig();
+      expect(initialConfig.matchingPreferences?.threshold).toBe(0.3);
 
       await updateConfig({
         matchingPreferences: {
@@ -152,32 +152,32 @@ describe('Full Flow Integration Tests', () => {
           maxPosts: 30,
           cacheTtlMinutes: 120,
         },
-      })
+      });
 
-      const updatedConfig = await getConfig()
-      expect(updatedConfig.matchingPreferences?.threshold).toBe(0.5)
-      expect(updatedConfig.matchingPreferences?.maxPosts).toBe(30)
-      expect(updatedConfig.matchingPreferences?.cacheTtlMinutes).toBe(120)
-    })
+      const updatedConfig = await getConfig();
+      expect(updatedConfig.matchingPreferences?.threshold).toBe(0.5);
+      expect(updatedConfig.matchingPreferences?.maxPosts).toBe(30);
+      expect(updatedConfig.matchingPreferences?.cacheTtlMinutes).toBe(120);
+    });
 
     it('should preserve other settings when updating specific fields', async () => {
       await updateConfig({
         apiKey: 'test-key',
         rssFeedUrl: 'https://example.com/feed.xml',
         isSetupComplete: true,
-      })
+      });
 
       await updateConfig({
         selectedModel: 'anthropic/claude-sonnet-4.5',
-      })
+      });
 
-      const config = await getConfig()
-      expect(config.apiKey).toBe('test-key')
-      expect(config.rssFeedUrl).toBe('https://example.com/feed.xml')
-      expect(config.isSetupComplete).toBe(true)
-      expect(config.selectedModel).toBe('anthropic/claude-sonnet-4.5')
-    })
-  })
+      const config = await getConfig();
+      expect(config.apiKey).toBe('test-key');
+      expect(config.rssFeedUrl).toBe('https://example.com/feed.xml');
+      expect(config.isSetupComplete).toBe(true);
+      expect(config.selectedModel).toBe('anthropic/claude-sonnet-4.5');
+    });
+  });
 
   describe('Cache Management Flow', () => {
     it('should clear all caches while preserving settings', async () => {
@@ -186,7 +186,7 @@ describe('Full Flow Integration Tests', () => {
         apiKey: 'test-key',
         rssFeedUrl: 'https://example.com/feed.xml',
         isSetupComplete: true,
-      })
+      });
 
       // Add some cached data
       const posts: ExtractedPostRecord[] = [
@@ -199,8 +199,8 @@ describe('Full Flow Integration Tests', () => {
           extractedAt: Date.now(),
           sourcePageUrl: 'https://linkedin.com/feed',
         },
-      ]
-      await addExtractedPosts(posts)
+      ];
+      await addExtractedPosts(posts);
 
       const matchedPosts: MatchedPostWithScore[] = [
         {
@@ -211,25 +211,25 @@ describe('Full Flow Integration Tests', () => {
           matchedAt: Date.now(),
           status: 'pending',
         },
-      ]
-      await saveMatchedPostsWithScore(matchedPosts)
+      ];
+      await saveMatchedPostsWithScore(matchedPosts);
 
       // Clear caches
-      await clearAllCaches()
+      await clearAllCaches();
 
       // Verify caches are cleared
-      const extractedPosts = await getExtractedPosts()
-      expect(extractedPosts).toHaveLength(0)
+      const extractedPosts = await getExtractedPosts();
+      expect(extractedPosts).toHaveLength(0);
 
-      const matchedPostsResult = await getMatchedPostsWithScore()
-      expect(matchedPostsResult).toHaveLength(0)
+      const matchedPostsResult = await getMatchedPostsWithScore();
+      expect(matchedPostsResult).toHaveLength(0);
 
       // Verify config is preserved
-      const config = await getConfig()
-      expect(config.apiKey).toBe('test-key')
-      expect(config.rssFeedUrl).toBe('https://example.com/feed.xml')
-      expect(config.isSetupComplete).toBe(true)
-    })
+      const config = await getConfig();
+      expect(config.apiKey).toBe('test-key');
+      expect(config.rssFeedUrl).toBe('https://example.com/feed.xml');
+      expect(config.isSetupComplete).toBe(true);
+    });
 
     it('should clear RSS cache separately', async () => {
       // This tests the clearCachedRssFeed function
@@ -250,16 +250,16 @@ describe('Full Flow Integration Tests', () => {
         fetchedAt: Date.now(),
         ttl: 60 * 60 * 1000,
         url: 'https://example.com/feed.xml',
-      }
+      };
 
-      setMockStorage({ [STORAGE_KEYS.CACHED_RSS_FEED]: cachedFeed }, 'local')
+      setMockStorage({ [STORAGE_KEYS.CACHED_RSS_FEED]: cachedFeed }, 'local');
 
-      await clearCachedRssFeed()
+      await clearCachedRssFeed();
 
-      const retrieved = await getCachedRssFeed()
-      expect(retrieved).toBeNull()
-    })
-  })
+      const retrieved = await getCachedRssFeed();
+      expect(retrieved).toBeNull();
+    });
+  });
 
   describe('Post Status Updates', () => {
     it('should update post status correctly', async () => {
@@ -280,18 +280,18 @@ describe('Full Flow Integration Tests', () => {
           matchedAt: Date.now(),
           status: 'pending',
         },
-      ]
+      ];
 
-      await saveMatchedPostsWithScore(matchedPosts)
+      await saveMatchedPostsWithScore(matchedPosts);
 
       // Update status to skipped
-      const posts = await getMatchedPostsWithScore()
-      posts[0].status = 'skipped'
-      await saveMatchedPostsWithScore(posts)
+      const posts = await getMatchedPostsWithScore();
+      posts[0].status = 'skipped';
+      await saveMatchedPostsWithScore(posts);
 
-      const updated = await getMatchedPostsWithScore()
-      expect(updated[0].status).toBe('skipped')
-    })
+      const updated = await getMatchedPostsWithScore();
+      expect(updated[0].status).toBe('skipped');
+    });
 
     it('should filter posts by status', async () => {
       const matchedPosts: MatchedPostWithScore[] = [
@@ -343,39 +343,39 @@ describe('Full Flow Integration Tests', () => {
           matchedAt: Date.now(),
           status: 'replied',
         },
-      ]
+      ];
 
-      await saveMatchedPostsWithScore(matchedPosts)
-      const allPosts = await getMatchedPostsWithScore()
+      await saveMatchedPostsWithScore(matchedPosts);
+      const allPosts = await getMatchedPostsWithScore();
 
-      const pendingPosts = allPosts.filter(p => p.status === 'pending')
-      const skippedPosts = allPosts.filter(p => p.status === 'skipped')
-      const draftedPosts = allPosts.filter(p => p.status === 'replied')
+      const pendingPosts = allPosts.filter((p) => p.status === 'pending');
+      const skippedPosts = allPosts.filter((p) => p.status === 'skipped');
+      const draftedPosts = allPosts.filter((p) => p.status === 'replied');
 
-      expect(pendingPosts).toHaveLength(1)
-      expect(skippedPosts).toHaveLength(1)
-      expect(draftedPosts).toHaveLength(1)
-    })
-  })
+      expect(pendingPosts).toHaveLength(1);
+      expect(skippedPosts).toHaveLength(1);
+      expect(draftedPosts).toHaveLength(1);
+    });
+  });
 
   describe('Refresh Flow', () => {
     it('should track refresh timestamp correctly', async () => {
       // This tests that the lastFetchTime is updated correctly
-      const initialConfig = await getConfig()
-      expect(initialConfig.lastFetchTime).toBeUndefined()
+      const initialConfig = await getConfig();
+      expect(initialConfig.lastFetchTime).toBeUndefined();
 
-      const fetchTime = Date.now()
-      await updateConfig({ lastFetchTime: fetchTime })
+      const fetchTime = Date.now();
+      await updateConfig({ lastFetchTime: fetchTime });
 
-      const updatedConfig = await getConfig()
-      expect(updatedConfig.lastFetchTime).toBe(fetchTime)
-    })
-  })
+      const updatedConfig = await getConfig();
+      expect(updatedConfig.lastFetchTime).toBe(fetchTime);
+    });
+  });
 
   describe('Performance Limits', () => {
     it('should limit stored posts to MAX_MATCHED_POSTS', async () => {
       // Create more posts than the limit
-      const matchedPosts: MatchedPostWithScore[] = []
+      const matchedPosts: MatchedPostWithScore[] = [];
       for (let i = 0; i < 150; i++) {
         matchedPosts.push({
           post: {
@@ -392,19 +392,19 @@ describe('Full Flow Integration Tests', () => {
           matchReason: `Match ${i}`,
           matchedAt: Date.now(),
           status: 'pending',
-        })
+        });
       }
 
-      await saveMatchedPostsWithScore(matchedPosts)
-      const retrieved = await getMatchedPostsWithScore()
+      await saveMatchedPostsWithScore(matchedPosts);
+      const retrieved = await getMatchedPostsWithScore();
 
       // Should be limited to MAX_MATCHED_POSTS (100)
-      expect(retrieved.length).toBeLessThanOrEqual(100)
+      expect(retrieved.length).toBeLessThanOrEqual(100);
 
       // Should be sorted by score, so highest scores are kept
       for (let i = 0; i < retrieved.length - 1; i++) {
-        expect(retrieved[i].score).toBeGreaterThanOrEqual(retrieved[i + 1].score)
+        expect(retrieved[i].score).toBeGreaterThanOrEqual(retrieved[i + 1].score);
       }
-    })
-  })
-})
+    });
+  });
+});

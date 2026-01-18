@@ -2,69 +2,69 @@
  * Core type definitions for ReplyQueue extension
  */
 
-export type AppView = 'setup' | 'main' | 'settings'
+export type AppView = 'setup' | 'main' | 'settings';
 
 /**
  * Matching preferences for keyword-based post filtering
  */
 export interface MatchingPreferences {
   /** Minimum relevance score threshold (0-1) */
-  threshold: number
+  threshold: number;
   /** Maximum number of posts to show */
-  maxPosts: number
+  maxPosts: number;
   /** Cache TTL in minutes */
-  cacheTtlMinutes: number
+  cacheTtlMinutes: number;
 }
 
 export interface ExtensionConfig {
-  apiKey: string
-  rssFeedUrl: string
-  selectedModel: string
-  isSetupComplete: boolean
-  lastFetchTime?: number
+  apiKey: string;
+  rssFeedUrl: string;
+  selectedModel: string;
+  isSetupComplete: boolean;
+  lastFetchTime?: number;
   /** Matching preferences */
-  matchingPreferences?: MatchingPreferences
+  matchingPreferences?: MatchingPreferences;
   /** User's writing style examples */
-  exampleComments?: string[]
+  exampleComments?: string[];
   /** Communication preferences/rules for AI-generated replies */
-  communicationPreferences?: string
+  communicationPreferences?: string;
 }
 
 export interface Post {
-  id: string
-  title: string
-  link: string
-  author: string
-  pubDate: string
-  content: string
-  guid: string
+  id: string;
+  title: string;
+  link: string;
+  author: string;
+  pubDate: string;
+  content: string;
+  guid: string;
 }
 
 export interface MatchedPost extends Post {
-  matchedAt: number
-  status: 'pending' | 'drafted' | 'posted' | 'skipped'
-  draftReply?: string
+  matchedAt: number;
+  status: 'pending' | 'drafted' | 'posted' | 'skipped';
+  draftReply?: string;
 }
 
 export interface ValidationResult {
-  valid: boolean
-  error?: string
+  valid: boolean;
+  error?: string;
 }
 
 export interface ApiKeyValidationResult extends ValidationResult {
-  credits?: number
-  models?: string[]
+  credits?: number;
+  models?: string[];
 }
 
 export interface RssFeedValidationResult extends ValidationResult {
-  feedTitle?: string
-  itemCount?: number
+  feedTitle?: string;
+  itemCount?: number;
 }
 
 export interface StorageData {
-  config?: ExtensionConfig
-  matchedPosts?: MatchedPost[]
-  extractedPosts?: ExtractedPostRecord[]
+  config?: ExtensionConfig;
+  matchedPosts?: MatchedPost[];
+  extractedPosts?: ExtractedPostRecord[];
 }
 
 /**
@@ -72,22 +72,22 @@ export interface StorageData {
  * Includes metadata about when/where it was extracted
  */
 export interface ExtractedPostRecord {
-  id: string
-  platform: string
-  url: string
-  authorName: string
-  authorHeadline?: string
-  authorProfileUrl?: string
-  content: string
-  publishedAt?: string
-  reactionCount?: number
-  commentCount?: number
-  repostCount?: number
-  isRepost?: boolean
-  contentType?: 'text' | 'image' | 'video' | 'article' | 'document' | 'poll'
-  extractedAt: number
+  id: string;
+  platform: string;
+  url: string;
+  authorName: string;
+  authorHeadline?: string;
+  authorProfileUrl?: string;
+  content: string;
+  publishedAt?: string;
+  reactionCount?: number;
+  commentCount?: number;
+  repostCount?: number;
+  isRepost?: boolean;
+  contentType?: 'text' | 'image' | 'video' | 'article' | 'document' | 'poll';
+  extractedAt: number;
   /** URL of the page where post was extracted */
-  sourcePageUrl: string
+  sourcePageUrl: string;
 }
 
 // ============================================================
@@ -99,27 +99,27 @@ export interface ExtractedPostRecord {
  */
 export interface RssFeedItem {
   /** Unique identifier (guid or link) */
-  id: string
+  id: string;
   /** Item title */
-  title: string
+  title: string;
   /** Item description/summary */
-  description?: string
+  description?: string;
   /** Full content (content:encoded or atom:content) */
-  content?: string
+  content?: string;
   /** URL to the item */
-  link: string
+  link: string;
   /** Publication date */
-  pubDate?: string
+  pubDate?: string;
   /** Author name */
-  author?: string
+  author?: string;
   /** Categories/tags */
-  categories?: string[]
+  categories?: string[];
   /** Enclosure (for podcasts, etc.) */
   enclosure?: {
-    url: string
-    type?: string
-    length?: number
-  }
+    url: string;
+    type?: string;
+    length?: number;
+  };
 }
 
 /**
@@ -127,17 +127,17 @@ export interface RssFeedItem {
  */
 export interface RssFeed {
   /** Feed title */
-  title: string
+  title: string;
   /** Feed description */
-  description?: string
+  description?: string;
   /** Feed link */
-  link?: string
+  link?: string;
   /** Feed items */
-  items: RssFeedItem[]
+  items: RssFeedItem[];
   /** Feed type (rss or atom) */
-  feedType: 'rss' | 'atom'
+  feedType: 'rss' | 'atom';
   /** Last build/updated date */
-  lastUpdated?: string
+  lastUpdated?: string;
 }
 
 /**
@@ -145,13 +145,13 @@ export interface RssFeed {
  */
 export interface CachedRssFeed {
   /** The parsed feed */
-  feed: RssFeed
+  feed: RssFeed;
   /** When the feed was fetched */
-  fetchedAt: number
+  fetchedAt: number;
   /** Cache TTL in milliseconds */
-  ttl: number
+  ttl: number;
   /** Source URL */
-  url: string
+  url: string;
 }
 
 // ============================================================
@@ -162,23 +162,23 @@ export interface CachedRssFeed {
  * Post tone/sentiment classification from heat check
  */
 export type PostTone =
-  | 'positive'      // Uplifting, encouraging, celebratory
-  | 'educational'   // Informative, teaching, sharing knowledge
-  | 'question'      // Asking for help or opinions
-  | 'negative'      // Complaining, venting, pessimistic
-  | 'promotional'   // Self-promotion, selling
-  | 'neutral'       // General updates, observations
+  | 'positive' // Uplifting, encouraging, celebratory
+  | 'educational' // Informative, teaching, sharing knowledge
+  | 'question' // Asking for help or opinions
+  | 'negative' // Complaining, venting, pessimistic
+  | 'promotional' // Self-promotion, selling
+  | 'neutral'; // General updates, observations
 
 /**
  * Heat check result for a post
  */
 export interface HeatCheckResult {
   /** Classified tone of the post */
-  tone: PostTone
+  tone: PostTone;
   /** Brief explanation of the classification */
-  reason: string
+  reason: string;
   /** Whether this post is a good candidate for engagement (true = green light) */
-  recommended: boolean
+  recommended: boolean;
 }
 
 /**
@@ -186,21 +186,21 @@ export interface HeatCheckResult {
  */
 export interface MatchedPostWithScore {
   /** The extracted post */
-  post: ExtractedPostRecord
+  post: ExtractedPostRecord;
   /** Relevance score (0-1) */
-  score: number
+  score: number;
   /** Keywords that matched */
-  matchedKeywords: string[]
+  matchedKeywords: string[];
   /** Reason for the match */
-  matchReason: string
+  matchReason: string;
   /** When the match was calculated */
-  matchedAt: number
+  matchedAt: number;
   /** Status for reply workflow */
-  status: 'pending' | 'replied' | 'skipped'
+  status: 'pending' | 'replied' | 'skipped';
   /** Draft reply (if generated) */
-  draftReply?: string
+  draftReply?: string;
   /** Heat check result (tone/sentiment analysis) */
-  heatCheck?: HeatCheckResult
+  heatCheck?: HeatCheckResult;
 }
 
 /**
@@ -208,13 +208,13 @@ export interface MatchedPostWithScore {
  */
 export interface MatchResult {
   /** Posts that matched above threshold */
-  matches: MatchedPostWithScore[]
+  matches: MatchedPostWithScore[];
   /** Total posts evaluated */
-  totalEvaluated: number
+  totalEvaluated: number;
   /** Keywords extracted from RSS feed */
-  keywords: string[]
+  keywords: string[];
   /** Time taken to match (ms) */
-  processingTimeMs: number
+  processingTimeMs: number;
 }
 
 // ============================================================
@@ -226,11 +226,11 @@ export interface MatchResult {
  */
 export interface ReplySuggestion {
   /** The suggestion text */
-  text: string
+  text: string;
   /** Unique ID for this suggestion */
-  id: string
+  id: string;
   /** When this suggestion was generated */
-  generatedAt: number
+  generatedAt: number;
 }
 
 /**
@@ -238,11 +238,11 @@ export interface ReplySuggestion {
  */
 export interface MatchedPostWithSuggestions extends MatchedPostWithScore {
   /** AI-generated reply suggestions */
-  replySuggestions?: ReplySuggestion[]
+  replySuggestions?: ReplySuggestion[];
   /** Whether AI matching was used */
-  aiMatched?: boolean
+  aiMatched?: boolean;
   /** AI-generated match reason (more detailed than keyword matching) */
-  aiMatchReason?: string
+  aiMatchReason?: string;
 }
 
 /**
@@ -250,22 +250,22 @@ export interface MatchedPostWithSuggestions extends MatchedPostWithScore {
  */
 export interface OpenRouterModel {
   /** Model ID (e.g., 'anthropic/claude-haiku-4.5') */
-  id: string
+  id: string;
   /** Display name */
-  name: string
+  name: string;
   /** Model description */
-  description?: string
+  description?: string;
   /** Context length */
-  context_length: number
+  context_length: number;
   /** Pricing per 1M tokens */
   pricing: {
-    prompt: string
-    completion: string
-  }
+    prompt: string;
+    completion: string;
+  };
   /** When the model was created/released */
-  created?: number
+  created?: number;
   /** Whether the model is recommended */
-  isRecommended?: boolean
+  isRecommended?: boolean;
 }
 
 /**
@@ -273,11 +273,11 @@ export interface OpenRouterModel {
  */
 export interface CachedModelList {
   /** List of models */
-  models: OpenRouterModel[]
+  models: OpenRouterModel[];
   /** When the list was fetched */
-  fetchedAt: number
+  fetchedAt: number;
   /** Cache TTL in milliseconds (1 hour) */
-  ttl: number
+  ttl: number;
 }
 
 /**
@@ -285,46 +285,46 @@ export interface CachedModelList {
  */
 export interface ModelFilterOptions {
   /** Maximum blended price per 1M tokens */
-  maxPrice?: number
+  maxPrice?: number;
   /** Maximum model age in days */
-  maxAgeDays?: number
+  maxAgeDays?: number;
   /** Text search query */
-  searchQuery?: string
+  searchQuery?: string;
   /** Whether to show all models or just recommended */
-  showAll?: boolean
+  showAll?: boolean;
 }
 
 /**
  * OpenRouter chat completion request
  */
 export interface OpenRouterChatRequest {
-  model: string
+  model: string;
   messages: Array<{
-    role: 'system' | 'user' | 'assistant'
-    content: string
-  }>
-  temperature?: number
-  max_tokens?: number
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+  }>;
+  temperature?: number;
+  max_tokens?: number;
 }
 
 /**
  * OpenRouter chat completion response
  */
 export interface OpenRouterChatResponse {
-  id: string
-  model: string
+  id: string;
+  model: string;
   choices: Array<{
     message: {
-      role: string
-      content: string
-    }
-    finish_reason: string
-  }>
+      role: string;
+      content: string;
+    };
+    finish_reason: string;
+  }>;
   usage?: {
-    prompt_tokens: number
-    completion_tokens: number
-    total_tokens: number
-  }
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
 }
 
 /**
@@ -332,18 +332,18 @@ export interface OpenRouterChatResponse {
  */
 export interface AIMatchResult {
   /** Post ID */
-  postId: string
+  postId: string;
   /** Relevance score (0-1) */
-  score: number
+  score: number;
   /** Reason for the match */
-  reason: string
+  reason: string;
   /** Reply suggestions */
-  suggestions: string[]
+  suggestions: string[];
 }
 
 /**
  * Response from AI matching batch
  */
 export interface AIMatchBatchResponse {
-  results: AIMatchResult[]
+  results: AIMatchResult[];
 }
