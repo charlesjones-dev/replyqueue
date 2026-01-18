@@ -135,7 +135,7 @@ function handleMessage(
       }
       break;
 
-    case 'GET_EXTRACTION_STATUS':
+    case 'GET_EXTRACTION_STATUS': {
       const statusResponse: ExtractionStatusResponse = {
         isExtracting: extractor !== null,
         extractedCount: extractor?.getExtractedCount() || 0,
@@ -143,6 +143,7 @@ function handleMessage(
       };
       sendResponse({ success: true, data: statusResponse });
       break;
+    }
 
     case 'SCROLL_TO_POST':
       if (adapter && message.postId) {

@@ -154,7 +154,7 @@ export async function updateConfig(updates: Partial<ExtensionConfig>): Promise<E
   }
 
   // Save the rest to sync storage with empty apiKey
-  const { apiKey: _, ...syncConfig } = updated;
+  const { apiKey: _apiKey, ...syncConfig } = updated;
   await set(STORAGE_KEYS.CONFIG, { ...syncConfig, apiKey: '' });
 
   return updated;

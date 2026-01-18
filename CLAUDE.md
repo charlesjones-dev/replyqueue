@@ -112,3 +112,16 @@ import { shared } from '@shared/types'   // → src/shared/types
 - `src/shared/types.ts` - Core TypeScript interfaces
 - `src/background/matcher.ts` - Keyword + AI matching logic
 - `src/background/openrouter.ts` - AI API client
+
+## Workflow
+
+After implementing any plan, always run preflight checks:
+
+```bash
+pnpm build        # Type check + build
+pnpm lint:fix     # Auto-fix lint issues
+pnpm format       # Auto-fix formatting
+pnpm test         # Run tests
+```
+
+Fix any errors before considering the implementation complete.
