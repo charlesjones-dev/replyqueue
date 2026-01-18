@@ -1,13 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-  getConfig,
-  saveConfig,
-  updateConfig,
-  clearAllData,
-  getApiKey,
-  saveApiKey,
-  clearApiKey,
-} from '@shared/storage';
+import { getConfig, saveConfig, updateConfig, clearAllData, getApiKey, saveApiKey, clearApiKey } from '@shared/storage';
 import { DEFAULT_CONFIG, STORAGE_KEYS } from '@shared/constants';
 import { clearMockStorage, setMockStorage, mockChrome } from '../setup';
 

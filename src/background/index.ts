@@ -43,6 +43,18 @@ import { fetchModelsWithCache, InsufficientCreditsError } from './openrouter';
 
 const LOG_PREFIX = '[ReplyQueue:Background]';
 
+/**
+ * Allowed origins for content script messages
+ * Add new platform domains here when implementing new platform adapters
+ */
+const ALLOWED_CONTENT_SCRIPT_ORIGINS = /^https:\/\/(www\.)?linkedin\.com\//;
+
+/**
+ * Content script message types that require origin validation
+ * These messages originate from content scripts running on social media pages
+ */
+const CONTENT_SCRIPT_MESSAGE_TYPES = ['POSTS_EXTRACTED', 'CONTENT_SCRIPT_READY', 'OPEN_SIDE_PANEL'] as const;
+
 // Track active content scripts
 const activeContentScripts = new Map<number, { platform: string; pageUrl: string; isFeedPage: boolean }>();
 
@@ -743,6 +755,15 @@ chrome.runtime.onMessage.addListener(
   ) => {
     const senderId = sender.tab?.id;
     console.log(`${LOG_PREFIX} Received message: ${message.type} from tab ${senderId}`);
+
+    // Validate origin for content script messages
+    if (CONTENT_SCRIPT_MESSAGE_TYPES.includes(message.type as (typeof CONTENT_SCRIPT_MESSAGE_TYPES)[number])) {
+      if (!sender.url || !ALLOWED_CONTENT_SCRIPT_ORIGINS.test(sender.url)) {
+        console.warn(`${LOG_PREFIX} Rejected message from unauthorized origin:`, sender.url);
+        sendResponse({ success: false, error: 'Unauthorized origin' });
+        return true;
+      }
+    }
 
     // Handle async messages
     const handleAsync = async () => {

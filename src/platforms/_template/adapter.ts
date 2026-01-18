@@ -12,6 +12,7 @@
  * 4. Register the platform in src/platforms/index.ts
  * 5. Update manifest.json with the new platform's URL patterns
  * 6. Add tests for the new adapter
+ * 7. Add the platform's domain to ALLOWED_CONTENT_SCRIPT_ORIGINS in src/background/index.ts
  */
 
 import type { PlatformAdapter, ExtractedPost, FeedSelectors } from '../types';

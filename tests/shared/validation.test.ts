@@ -80,6 +80,63 @@ describe('validateRssUrlFormat', () => {
     const result = validateRssUrlFormat('https://example.com/feed?type=rss');
     expect(result.valid).toBe(true);
   });
+
+  describe('SSRF protection', () => {
+    it('should reject localhost', () => {
+      const result = validateRssUrlFormat('http://localhost/feed.xml');
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('Private or internal');
+    });
+
+    it('should reject 127.0.0.1', () => {
+      const result = validateRssUrlFormat('http://127.0.0.1/feed.xml');
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('Private or internal');
+    });
+
+    it('should reject ::1 (IPv6 localhost)', () => {
+      const result = validateRssUrlFormat('http://[::1]/feed.xml');
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('Private or internal');
+    });
+
+    it('should reject 0.0.0.0', () => {
+      const result = validateRssUrlFormat('http://0.0.0.0/feed.xml');
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('Private or internal');
+    });
+
+    it('should reject 10.x.x.x private range', () => {
+      const result = validateRssUrlFormat('http://10.0.0.1/feed.xml');
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('Private or internal');
+    });
+
+    it('should reject 172.16-31.x.x private range', () => {
+      expect(validateRssUrlFormat('http://172.16.0.1/feed').valid).toBe(false);
+      expect(validateRssUrlFormat('http://172.31.255.255/feed').valid).toBe(false);
+      // 172.15.x.x is not private
+      expect(validateRssUrlFormat('http://172.15.0.1/feed').valid).toBe(true);
+    });
+
+    it('should reject 192.168.x.x private range', () => {
+      const result = validateRssUrlFormat('http://192.168.1.1/feed.xml');
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('Private or internal');
+    });
+
+    it('should reject 169.254.x.x link-local range', () => {
+      const result = validateRssUrlFormat('http://169.254.1.1/feed.xml');
+      expect(result.valid).toBe(false);
+      expect(result.error).toContain('Private or internal');
+    });
+
+    it('should accept valid public URLs', () => {
+      expect(validateRssUrlFormat('https://example.com/feed.xml').valid).toBe(true);
+      expect(validateRssUrlFormat('https://blog.company.io/rss').valid).toBe(true);
+      expect(validateRssUrlFormat('http://8.8.8.8/feed').valid).toBe(true);
+    });
+  });
 });
 
 describe('validateApiKeyWithServer', () => {

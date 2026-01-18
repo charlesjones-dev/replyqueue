@@ -379,6 +379,16 @@ describe('TwitterAdapter', () => {
 })
 ```
 
+### Step 7: Update Message Origin Validation
+
+In `src/background/index.ts`, add the platform's domain to the `ALLOWED_CONTENT_SCRIPT_ORIGINS` regex:
+
+```typescript
+const ALLOWED_CONTENT_SCRIPT_ORIGINS = /^https:\/\/(www\.)?(linkedin\.com|twitter\.com|x\.com)\//;
+```
+
+This security measure ensures the background script only accepts messages from authorized platform domains.
+
 ---
 
 ## Testing Requirements

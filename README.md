@@ -6,25 +6,28 @@
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome)](https://developer.chrome.com/docs/extensions/mv3/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-A Chrome extension that helps content creators identify social media posts relevant to their blog content, surfacing engagement opportunities with AI-powered reply suggestions.
+**Stop scrolling past engagement opportunities.** ReplyQueue watches your LinkedIn feed and surfaces posts that align with your blog content, so you can join conversations that matter.
 
-## Features
+## Why ReplyQueue?
 
-- **RSS Feed Integration** - Connect your blog's RSS feed to track your content
-- **LinkedIn Post Extraction** - Automatically extracts posts as you browse LinkedIn
-- **AI-Powered Matching** - Uses semantic analysis to find posts relevant to your content
-- **Reply Suggestions** - Generates personalized reply suggestions based on your writing style
-- **Jump to Post** - Quickly navigate to matched posts in your feed
+Content creators spend hours scrolling social feeds hoping to find relevant discussions. ReplyQueue flips that model: connect your RSS feed, browse normally, and let AI surface the posts worth your time.
+
+- **Passive Discovery** - Extracts posts as you scroll, no extra workflow
+- **Smart Matching** - Keyword and AI-powered relevance scoring against your content
+- **Reply Suggestions** - Generates responses that match your writing style
+- **Jump to Post** - One click to navigate directly to matched posts
 - **Privacy-First** - No analytics, no tracking, your data stays local
+- **Extensible** - Platform adapter pattern makes adding new networks straightforward
 
-## Chrome Web Store
+## Quick Start
 
-**Short Description** (132 characters):
-> Find LinkedIn posts relevant to your blog content and get AI-powered reply suggestions to boost engagement.
+```bash
+git clone https://github.com/charlesjones-dev/replyqueue.git
+cd replyqueue
+pnpm install && pnpm build
+```
 
-**Coming Soon** - The extension will be available on the Chrome Web Store.
-
-For now, install from source using the instructions below.
+Then load `dist/` as an unpacked extension in Chrome. See [Installation](#installation) for detailed steps.
 
 ---
 
@@ -173,6 +176,9 @@ ReplyQueue is designed to support multiple social media platforms. To add a new 
 6. **Add tests**
    - Create `tests/platforms/twitter-extraction.test.ts`
    - Test post extraction with mock DOM elements
+
+7. **Update allowed origins for message validation**
+   - In `src/background/index.ts`, add the platform's domain to `ALLOWED_CONTENT_SCRIPT_ORIGINS`
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 
