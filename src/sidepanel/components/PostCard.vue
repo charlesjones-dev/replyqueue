@@ -173,6 +173,12 @@ const hiddenSuggestionsCount = computed(() => {
         <span class="rounded-full px-2 py-0.5 text-xs font-medium" :class="statusBadge.class">
           {{ statusBadge.text }}
         </span>
+        <span
+          v-if="match.skippedBeforeAnalysis"
+          class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500"
+        >
+          Pre-Skipped
+        </span>
       </div>
       <div class="flex items-center gap-1.5">
         <!-- Heat Check Badge -->

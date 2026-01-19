@@ -606,6 +606,44 @@ export async function clearExampleComments(): Promise<void> {
 }
 
 // ============================================================
+// Skip queued post (before AI analysis)
+// ============================================================
+
+/**
+ * Skip a queued post before AI analysis
+ * Creates a synthetic MatchedPostWithScore with status 'skipped' and skippedBeforeAnalysis flag
+ */
+export async function skipQueuedPost(postId: string, platform: string): Promise<void> {
+  // Find post in extractedPosts
+  const extractedPosts = await getExtractedPosts();
+  const post = extractedPosts.find((p) => p.id === postId && p.platform === platform);
+
+  if (!post) {
+    throw new Error('Post not found in queue');
+  }
+
+  // Create synthetic MatchedPostWithScore
+  const skippedMatch: MatchedPostWithScore = {
+    post,
+    score: 0,
+    matchedKeywords: [],
+    matchReason: 'Skipped before AI analysis',
+    matchedAt: Date.now(),
+    status: 'skipped',
+    skippedBeforeAnalysis: true,
+  };
+
+  // Add to matchedPostsWithScore
+  const matchedPosts = await getMatchedPostsWithScore();
+  matchedPosts.push(skippedMatch);
+  await saveMatchedPostsWithScore(matchedPosts);
+
+  // Add to evaluatedPostIds so it doesn't show in queue
+  const key = `${platform}:${postId}`;
+  await addEvaluatedPostIds([key]);
+}
+
+// ============================================================
 // Export storage object
 // ============================================================
 
@@ -636,6 +674,8 @@ export const storage = {
   saveMatchedPostsWithScore,
   updateMatchedPostStatus,
   clearMatchedPostsWithScore,
+  // Skip queued post
+  skipQueuedPost,
   // Evaluated post IDs
   getEvaluatedPostIds,
   saveEvaluatedPostIds,

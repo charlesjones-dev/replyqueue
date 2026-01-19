@@ -10,6 +10,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'open', postId: string, platform: string): void;
   (e: 'jumpToPost', postId: string, platform: string): void;
+  (e: 'skip', postId: string, platform: string): void;
 }>();
 
 const isJumping = ref(false);
@@ -52,6 +53,10 @@ function handleJumpToPost() {
   setTimeout(() => {
     isJumping.value = false;
   }, 1500);
+}
+
+function handleSkip() {
+  emit('skip', props.post.id, props.post.platform);
 }
 </script>
 
@@ -98,6 +103,14 @@ function handleJumpToPost() {
 
     <!-- Footer -->
     <div class="flex items-center justify-end gap-2 border-t border-gray-100 pt-3">
+      <button
+        type="button"
+        class="rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+        title="Skip this post"
+        @click="handleSkip"
+      >
+        Skip
+      </button>
       <button
         type="button"
         class="flex items-center gap-1 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"

@@ -27,6 +27,8 @@ export type MessageType =
   | 'GENERATE_SUGGESTIONS'
   | 'REGENERATE_SUGGESTIONS'
   | 'HEAT_CHECK_POSTS'
+  // Queue management
+  | 'SKIP_QUEUED_POST'
   // Permission messages
   | 'REQUEST_HOST_PERMISSION'
   | 'CHECK_HOST_PERMISSION';
@@ -176,6 +178,19 @@ export interface HeatCheckPostsMessage extends BaseMessage {
 }
 
 // ============================================================
+// Queue management messages
+// ============================================================
+
+/**
+ * Skip a queued post before AI analysis
+ */
+export interface SkipQueuedPostMessage extends BaseMessage {
+  type: 'SKIP_QUEUED_POST';
+  postId: string;
+  platform: string;
+}
+
+// ============================================================
 // Permission messages
 // ============================================================
 
@@ -218,6 +233,7 @@ export type ExtensionMessage =
   | GenerateSuggestionsMessage
   | RegenerateSuggestionsMessage
   | HeatCheckPostsMessage
+  | SkipQueuedPostMessage
   | RequestHostPermissionMessage
   | CheckHostPermissionMessage;
 

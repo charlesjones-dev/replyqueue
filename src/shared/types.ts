@@ -209,6 +209,8 @@ export interface MatchedPostWithScore {
   draftReply?: string;
   /** Heat check result (tone/sentiment analysis) */
   heatCheck?: HeatCheckResult;
+  /** Flag indicating post was skipped before AI analysis */
+  skippedBeforeAnalysis?: boolean;
 }
 
 /**

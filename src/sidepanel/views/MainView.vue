@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useAppState } from '../composables/useAppState';
 import { usePosts, type PostFilter } from '../composables/usePosts';
 import { useConfig } from '../composables/useConfig';
@@ -42,6 +42,14 @@ const {
   isQueueAtLimit,
   maxQueueSize,
 } = usePosts();
+
+// Extension version from manifest
+const extensionVersion = computed(() => {
+  if (typeof chrome !== 'undefined' && chrome.runtime?.getManifest) {
+    return chrome.runtime.getManifest().version;
+  }
+  return '';
+});
 
 // AI matching state (includes heat check)
 const isAIMatching = ref(false);
@@ -241,6 +249,28 @@ function handleOpenQueued(postId: string, platform: string) {
   }
 }
 
+// Handle skip queued post - sends message to background to skip before AI analysis
+async function handleSkipQueued(postId: string, platform: string) {
+  try {
+    const response = (await sendMessage({
+      type: 'SKIP_QUEUED_POST',
+      postId,
+      platform,
+    } as never)) as MessageResponse;
+
+    if (!response.success) {
+      throw new Error(response.error ?? 'Failed to skip post');
+    }
+
+    // Reload posts to reflect the change
+    await loadPosts();
+    toast.success('Post skipped');
+  } catch (error) {
+    console.error('Failed to skip queued post:', error);
+    toast.error('Failed to skip post');
+  }
+}
+
 // Handle jump to queued post - sends message to content script to scroll to the post
 async function handleJumpToQueuedPost(postId: string, _platform: string) {
   try {
@@ -343,7 +373,10 @@ async function handleJumpToPost(postId: string, _platform: string) {
 
       <!-- Header -->
       <div class="mb-4 flex items-center justify-between">
-        <h1 class="text-xl font-bold text-gray-900">ReplyQueue</h1>
+        <div class="flex items-baseline gap-2">
+          <h1 class="text-xl font-bold text-gray-900">ReplyQueue</h1>
+          <span v-if="extensionVersion" class="text-xs text-gray-400">v{{ extensionVersion }}</span>
+        </div>
         <div class="flex items-center gap-2">
           <TabStatusBadge :is-active="isActiveOnPlatform" :platform="currentPlatform" />
           <button
@@ -577,6 +610,7 @@ async function handleJumpToPost(postId: string, _platform: string) {
           :post="post"
           @open="handleOpenQueued"
           @jump-to-post="handleJumpToQueuedPost"
+          @skip="handleSkipQueued"
         />
       </div>
 

@@ -30,6 +30,7 @@ import {
   isCachedFeedValid,
   addEvaluatedPostIds,
   getEvaluatedPostIds,
+  skipQueuedPost,
 } from '../shared/storage';
 import {
   DEFAULT_MATCHING_PREFERENCES,
@@ -745,6 +746,28 @@ async function handleRequestHostPermission(message: ExtensionMessage): Promise<M
 }
 
 /**
+ * Handle SKIP_QUEUED_POST message
+ * Skips a queued post before AI analysis
+ */
+async function handleSkipQueuedPost(message: ExtensionMessage): Promise<MessageResponse> {
+  const { postId, platform } = message as { postId: string; platform: string };
+
+  if (!postId || !platform) {
+    return { success: false, error: 'Post ID and platform are required' };
+  }
+
+  try {
+    await skipQueuedPost(postId, platform);
+    console.log(`${LOG_PREFIX} Skipped queued post ${postId} from ${platform}`);
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`${LOG_PREFIX} Error skipping queued post:`, error);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
  * Main message handler
  */
 chrome.runtime.onMessage.addListener(
@@ -804,6 +827,9 @@ chrome.runtime.onMessage.addListener(
 
         case 'HEAT_CHECK_POSTS':
           return handleHeatCheckPosts();
+
+        case 'SKIP_QUEUED_POST':
+          return handleSkipQueuedPost(message);
 
         case 'CHECK_HOST_PERMISSION':
           return handleCheckHostPermission(message);
