@@ -6,6 +6,7 @@
 import { ref, computed, readonly } from 'vue';
 import type { OpenRouterModel, ModelFilterOptions } from '@shared/types';
 import { sendMessage } from '@shared/messages';
+import { getConfig } from '@shared/storage';
 import {
   RECOMMENDED_MODELS,
   DEFAULT_MAX_MODEL_PRICE,
@@ -65,6 +66,35 @@ export function getCostTier(pricing: { prompt: string; completion: string }): '$
   if (blendedPrice <= COST_TIER_THRESHOLDS.cheap) return '$';
   if (blendedPrice <= COST_TIER_THRESHOLDS.medium) return '$$';
   return '$$$';
+}
+
+/**
+ * Format vendor ID into a display label
+ */
+function formatVendorLabel(vendor: string): string {
+  // Known vendor name mappings
+  const knownVendors: Record<string, string> = {
+    anthropic: 'Anthropic',
+    openai: 'OpenAI',
+    google: 'Google',
+    'x-ai': 'xAI',
+    'meta-llama': 'Meta (Llama)',
+    mistralai: 'Mistral',
+    cohere: 'Cohere',
+    deepseek: 'DeepSeek',
+    perplexity: 'Perplexity',
+    ai21: 'AI21',
+  };
+
+  if (knownVendors[vendor]) {
+    return knownVendors[vendor];
+  }
+
+  // Fallback: capitalize first letter of each word
+  return vendor
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 export function useModels() {
@@ -151,6 +181,28 @@ export function useModels() {
   });
 
   const hasRecommendedModels = computed(() => recommendedModels.value.length > 0);
+
+  /**
+   * Extract unique vendors from fetched models
+   * Returns array of { value, label } for UI display
+   */
+  const availableVendors = computed(() => {
+    const vendorSet = new Set<string>();
+    for (const model of models.value) {
+      const vendor = model.id.split('/')[0];
+      if (vendor) {
+        vendorSet.add(vendor);
+      }
+    }
+
+    // Sort alphabetically and format for UI
+    return Array.from(vendorSet)
+      .sort((a, b) => a.localeCompare(b))
+      .map((vendor) => ({
+        value: vendor,
+        label: formatVendorLabel(vendor),
+      }));
+  });
 
   /**
    * Fetch models from OpenRouter API (via background script)
@@ -243,6 +295,22 @@ export function useModels() {
     return `$${blendedPrice.toFixed(2)}/1M`;
   }
 
+  /**
+   * Sync filter options from saved config preferences
+   */
+  async function syncFiltersFromConfig(): Promise<void> {
+    const config = await getConfig();
+    const saved = config.modelFilterPreferences ?? {};
+    filterOptions.value = {
+      ...filterOptions.value,
+      maxPrice: saved.maxPrice ?? DEFAULT_MAX_MODEL_PRICE,
+      maxAgeDays: saved.maxAgeDays ?? DEFAULT_MAX_MODEL_AGE_DAYS,
+      minContextLength: saved.minContextLength ?? DEFAULT_MIN_CONTEXT_LENGTH,
+      allowedVendors: saved.allowedVendors ?? [...DEFAULT_ALLOWED_VENDORS],
+      nameExclusions: saved.nameExclusions ?? [...DEFAULT_MODEL_NAME_EXCLUSIONS],
+    };
+  }
+
   return {
     // State
     models: readonly(models),
@@ -256,6 +324,7 @@ export function useModels() {
     recommendedModels,
     filteredModels,
     hasRecommendedModels,
+    availableVendors,
 
     // Actions
     fetchModels,
@@ -267,5 +336,6 @@ export function useModels() {
     getModelDisplayInfo,
     formatPrice,
     getCostTier,
+    syncFiltersFromConfig,
   };
 }

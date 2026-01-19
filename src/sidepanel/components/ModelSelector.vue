@@ -46,6 +46,23 @@ function getCostTierColor(tier: '$' | '$$' | '$$$'): string {
   }
 }
 
+// Format context length for display
+function formatContextLength(contextLength: number): string {
+  if (contextLength >= 1_000_000) {
+    return `${(contextLength / 1_000_000).toFixed(contextLength % 1_000_000 === 0 ? 0 : 1)}M context`;
+  }
+  return `${Math.round(contextLength / 1_000)}K context`;
+}
+
+// Format release date for display (MM/YYYY)
+function formatReleaseDate(created?: number): string {
+  if (!created) return '';
+  const date = new Date(created * 1000);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${month}/${year}`;
+}
+
 function selectModel(model: OpenRouterModel) {
   emit('update:modelValue', model.id);
   isExpanded.value = false;
@@ -221,11 +238,15 @@ onMounted(() => {
               </span>
             </div>
 
-            <!-- Model ID and price -->
+            <!-- Context window, price, and release date -->
             <div class="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
-              <span class="truncate">{{ model.id }}</span>
+              <span>{{ formatContextLength(model.context_length) }}</span>
               <span class="text-gray-300">|</span>
               <span>{{ formatPrice(model.pricing) }}</span>
+              <template v-if="model.created">
+                <span class="text-gray-300">|</span>
+                <span>{{ formatReleaseDate(model.created) }}</span>
+              </template>
             </div>
           </div>
         </button>

@@ -34,6 +34,8 @@ export interface ExtensionConfig {
   maxQueueSize?: number;
   /** Maximum matched posts to keep after AI analysis */
   maxMatchedPosts?: number;
+  /** Model filter preferences for AI model selection */
+  modelFilterPreferences?: ModelFilterOptions;
 }
 
 export interface Post {

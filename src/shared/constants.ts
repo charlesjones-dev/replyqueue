@@ -2,7 +2,7 @@
  * Constants for ReplyQueue extension
  */
 
-import type { MatchingPreferences } from './types';
+import type { MatchingPreferences, ModelFilterOptions } from './types';
 
 // src/shared/constants.ts
 export const RECOMMENDED_MODELS = [
@@ -61,6 +61,7 @@ export const DEFAULT_CONFIG: {
   postContentCharLimit: number;
   maxQueueSize: number;
   maxMatchedPosts: number;
+  modelFilterPreferences: ModelFilterOptions;
 } = {
   apiKey: '',
   rssFeedUrl: '',
@@ -73,6 +74,13 @@ export const DEFAULT_CONFIG: {
   postContentCharLimit: DEFAULT_POST_CONTENT_CHAR_LIMIT,
   maxQueueSize: DEFAULT_MAX_QUEUE_SIZE,
   maxMatchedPosts: DEFAULT_MAX_MATCHED_POSTS,
+  modelFilterPreferences: {
+    maxPrice: 6,
+    maxAgeDays: 180,
+    minContextLength: 200000,
+    allowedVendors: ['anthropic', 'google', 'openai', 'x-ai'],
+    nameExclusions: ['image', 'flash', 'nano', 'mini', '-mini', 'fast', 'lite', 'codex', 'thinking'],
+  },
 };
 
 export const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
@@ -146,6 +154,43 @@ export const DEFAULT_MODEL_NAME_EXCLUSIONS = [
   'codex',
   'thinking',
 ] as const;
+
+// Context length options for model filtering
+export const CONTEXT_LENGTH_OPTIONS = [
+  { value: 0, label: 'Any context length' },
+  { value: 100000, label: '100K+ tokens' },
+  { value: 200000, label: '200K+ tokens (Default)' },
+  { value: 1000000, label: '1M+ tokens' },
+] as const;
+
+// Model age options for filtering (days)
+export const MODEL_AGE_OPTIONS = [
+  { value: 90, label: '3 months' },
+  { value: 180, label: '6 months (Default)' },
+  { value: 365, label: '1 year' },
+  { value: 0, label: 'No limit' },
+] as const;
+
+// Max price options for model filtering (per 1M tokens blended)
+export const MAX_PRICE_OPTIONS = [
+  { value: 1, label: '$1/1M tokens' },
+  { value: 3, label: '$3/1M tokens' },
+  { value: 6, label: '$6/1M tokens (Default)' },
+  { value: 10, label: '$10/1M tokens' },
+  { value: 25, label: '$25/1M tokens' },
+  { value: 50, label: '$50/1M tokens' },
+  { value: 75, label: '$75/1M tokens' },
+  { value: 0, label: 'No limit' },
+] as const;
+
+// Default model filter preferences
+export const DEFAULT_MODEL_FILTER_PREFERENCES: ModelFilterOptions = {
+  maxPrice: DEFAULT_MAX_MODEL_PRICE,
+  maxAgeDays: DEFAULT_MAX_MODEL_AGE_DAYS,
+  minContextLength: DEFAULT_MIN_CONTEXT_LENGTH,
+  allowedVendors: [...DEFAULT_ALLOWED_VENDORS],
+  nameExclusions: [...DEFAULT_MODEL_NAME_EXCLUSIONS],
+};
 
 // Number of reply suggestions to generate per post
 export const REPLY_SUGGESTIONS_COUNT = 3;

@@ -3,6 +3,7 @@ import { useSettingsView } from '../composables/useSettingsView';
 import ApiKeyInput from '../components/ApiKeyInput.vue';
 import ExampleCommentsList from '../components/ExampleCommentsList.vue';
 import ModelSelector from '../components/ModelSelector.vue';
+import ModelFilterSettings from '../components/ModelFilterSettings.vue';
 
 const {
   // Form state
@@ -17,6 +18,14 @@ const {
   blogContentCharLimit,
   postContentCharLimit,
   maxQueueSize,
+
+  // Model filter state
+  minContextLength,
+  maxAgeDays,
+  maxPrice,
+  allowedVendors,
+  nameExclusions,
+  newNameExclusion,
 
   // UI state
   isLoading,
@@ -46,6 +55,10 @@ const {
   maxMatchedPostsOptions,
   blogContentCharLimitOptions,
   postContentCharLimitOptions,
+  contextLengthOptions,
+  modelAgeOptions,
+  maxPriceOptions,
+  availableVendors,
 
   // Actions
   testApiKey,
@@ -59,6 +72,9 @@ const {
   addExample,
   removeExample,
   updateExample,
+  addNameExclusion,
+  removeNameExclusion,
+  toggleVendor,
 } = useSettingsView();
 </script>
 
@@ -226,12 +242,35 @@ const {
           <!-- Model Section -->
           <section class="rounded-lg bg-white p-4 shadow">
             <h2 class="mb-3 text-sm font-medium text-gray-900">AI Model</h2>
-            <div>
-              <label class="mb-1 block text-xs text-gray-500"> Selected Model </label>
-              <ModelSelector v-model="selectedModel" />
-              <p class="mt-1 text-xs text-gray-500">
-                This model will be used for AI-powered matching and reply generation.
-              </p>
+            <div class="space-y-4">
+              <div>
+                <label class="mb-1 block text-xs text-gray-500"> Selected Model </label>
+                <ModelSelector v-model="selectedModel" />
+                <p class="mt-1 text-xs text-gray-500">
+                  This model will be used for AI-powered matching and reply generation.
+                </p>
+              </div>
+
+              <!-- Model Filter Settings -->
+              <ModelFilterSettings
+                :min-context-length="minContextLength"
+                :max-age-days="maxAgeDays"
+                :max-price="maxPrice"
+                :allowed-vendors="allowedVendors"
+                :name-exclusions="nameExclusions"
+                :new-name-exclusion="newNameExclusion"
+                :context-length-options="contextLengthOptions"
+                :model-age-options="modelAgeOptions"
+                :max-price-options="maxPriceOptions"
+                :available-vendors="availableVendors"
+                @update:min-context-length="minContextLength = $event"
+                @update:max-age-days="maxAgeDays = $event"
+                @update:max-price="maxPrice = $event"
+                @update:new-name-exclusion="newNameExclusion = $event"
+                @toggle-vendor="toggleVendor"
+                @add-name-exclusion="addNameExclusion"
+                @remove-name-exclusion="removeNameExclusion"
+              />
             </div>
           </section>
 

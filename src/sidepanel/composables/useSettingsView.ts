@@ -31,11 +31,21 @@ import {
   POST_CONTENT_CHAR_LIMIT_OPTIONS,
   DEFAULT_POST_CONTENT_CHAR_LIMIT,
   DEFAULT_MAX_QUEUE_SIZE,
+  DEFAULT_MAX_MODEL_PRICE,
+  DEFAULT_MAX_MODEL_AGE_DAYS,
+  DEFAULT_MIN_CONTEXT_LENGTH,
+  DEFAULT_ALLOWED_VENDORS,
+  DEFAULT_MODEL_NAME_EXCLUSIONS,
+  CONTEXT_LENGTH_OPTIONS,
+  MODEL_AGE_OPTIONS,
+  MAX_PRICE_OPTIONS,
 } from '@shared/constants';
+import { useModels } from './useModels';
 
 export function useSettingsView() {
   const { config, loadConfig, update } = useConfig();
   const { closeSettings } = useAppState();
+  const { syncFiltersFromConfig, availableVendors } = useModels();
 
   // Form state
   const apiKey = ref('');
@@ -50,6 +60,14 @@ export function useSettingsView() {
   const blogContentCharLimit = ref(DEFAULT_BLOG_CONTENT_CHAR_LIMIT);
   const postContentCharLimit = ref(DEFAULT_POST_CONTENT_CHAR_LIMIT);
   const maxQueueSize = ref(DEFAULT_MAX_QUEUE_SIZE);
+
+  // Model filter state
+  const minContextLength = ref(DEFAULT_MIN_CONTEXT_LENGTH);
+  const maxAgeDays = ref(DEFAULT_MAX_MODEL_AGE_DAYS);
+  const maxPrice = ref(DEFAULT_MAX_MODEL_PRICE);
+  const allowedVendors = ref<string[]>([...DEFAULT_ALLOWED_VENDORS]);
+  const nameExclusions = ref<string[]>([...DEFAULT_MODEL_NAME_EXCLUSIONS]);
+  const newNameExclusion = ref('');
 
   // UI state
   const isLoading = ref(false);
@@ -87,6 +105,11 @@ export function useSettingsView() {
     blogContentCharLimit: DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
     postContentCharLimit: DEFAULT_POST_CONTENT_CHAR_LIMIT,
     maxQueueSize: DEFAULT_MAX_QUEUE_SIZE,
+    minContextLength: DEFAULT_MIN_CONTEXT_LENGTH,
+    maxAgeDays: DEFAULT_MAX_MODEL_AGE_DAYS,
+    maxPrice: DEFAULT_MAX_MODEL_PRICE,
+    allowedVendors: [...DEFAULT_ALLOWED_VENDORS] as string[],
+    nameExclusions: [...DEFAULT_MODEL_NAME_EXCLUSIONS] as string[],
   });
 
   // Computed values
@@ -130,6 +153,11 @@ export function useSettingsView() {
       blogContentCharLimit,
       postContentCharLimit,
       maxQueueSize,
+      minContextLength,
+      maxAgeDays,
+      maxPrice,
+      allowedVendors,
+      nameExclusions,
     ],
     () => {
       checkForChanges();
@@ -152,7 +180,14 @@ export function useSettingsView() {
       communicationPreferences.value !== originalValues.value.communicationPreferences ||
       blogContentCharLimit.value !== originalValues.value.blogContentCharLimit ||
       postContentCharLimit.value !== originalValues.value.postContentCharLimit ||
-      maxQueueSize.value !== originalValues.value.maxQueueSize;
+      maxQueueSize.value !== originalValues.value.maxQueueSize ||
+      minContextLength.value !== originalValues.value.minContextLength ||
+      maxAgeDays.value !== originalValues.value.maxAgeDays ||
+      maxPrice.value !== originalValues.value.maxPrice ||
+      JSON.stringify([...allowedVendors.value].sort()) !==
+        JSON.stringify([...originalValues.value.allowedVendors].sort()) ||
+      JSON.stringify([...nameExclusions.value].sort()) !==
+        JSON.stringify([...originalValues.value.nameExclusions].sort());
 
     hasUnsavedChanges.value = changed;
   }
@@ -179,6 +214,14 @@ export function useSettingsView() {
       postContentCharLimit.value = cfg.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT;
       maxQueueSize.value = cfg.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE;
 
+      // Load model filter preferences
+      const filterPrefs = cfg.modelFilterPreferences ?? {};
+      minContextLength.value = filterPrefs.minContextLength ?? DEFAULT_MIN_CONTEXT_LENGTH;
+      maxAgeDays.value = filterPrefs.maxAgeDays ?? DEFAULT_MAX_MODEL_AGE_DAYS;
+      maxPrice.value = filterPrefs.maxPrice ?? DEFAULT_MAX_MODEL_PRICE;
+      allowedVendors.value = [...(filterPrefs.allowedVendors ?? DEFAULT_ALLOWED_VENDORS)];
+      nameExclusions.value = [...(filterPrefs.nameExclusions ?? DEFAULT_MODEL_NAME_EXCLUSIONS)];
+
       // Load example comments
       exampleComments.value = await getExampleComments();
 
@@ -198,6 +241,11 @@ export function useSettingsView() {
         blogContentCharLimit: cfg.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
         postContentCharLimit: cfg.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT,
         maxQueueSize: cfg.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE,
+        minContextLength: minContextLength.value,
+        maxAgeDays: maxAgeDays.value,
+        maxPrice: maxPrice.value,
+        allowedVendors: [...allowedVendors.value],
+        nameExclusions: [...nameExclusions.value],
       };
 
       hasUnsavedChanges.value = false;
@@ -283,7 +331,17 @@ export function useSettingsView() {
         postContentCharLimit: postContentCharLimit.value,
         maxQueueSize: maxQueueSize.value,
         maxMatchedPosts: maxMatchedPosts.value,
+        modelFilterPreferences: {
+          minContextLength: minContextLength.value,
+          maxAgeDays: maxAgeDays.value,
+          maxPrice: maxPrice.value,
+          allowedVendors: [...allowedVendors.value],
+          nameExclusions: [...nameExclusions.value],
+        },
       });
+
+      // Sync model filters to useModels composable
+      await syncFiltersFromConfig();
 
       // Save example comments separately
       await saveExampleComments(exampleComments.value);
@@ -317,6 +375,11 @@ export function useSettingsView() {
         blogContentCharLimit: blogContentCharLimit.value,
         postContentCharLimit: postContentCharLimit.value,
         maxQueueSize: maxQueueSize.value,
+        minContextLength: minContextLength.value,
+        maxAgeDays: maxAgeDays.value,
+        maxPrice: maxPrice.value,
+        allowedVendors: [...allowedVendors.value],
+        nameExclusions: [...nameExclusions.value],
       };
 
       hasUnsavedChanges.value = false;
@@ -345,6 +408,11 @@ export function useSettingsView() {
     blogContentCharLimit.value = originalValues.value.blogContentCharLimit;
     postContentCharLimit.value = originalValues.value.postContentCharLimit;
     maxQueueSize.value = originalValues.value.maxQueueSize;
+    minContextLength.value = originalValues.value.minContextLength;
+    maxAgeDays.value = originalValues.value.maxAgeDays;
+    maxPrice.value = originalValues.value.maxPrice;
+    allowedVendors.value = [...originalValues.value.allowedVendors];
+    nameExclusions.value = [...originalValues.value.nameExclusions];
 
     // Clear validation state
     apiKeyError.value = null;
@@ -428,6 +496,30 @@ export function useSettingsView() {
     exampleComments.value = await updateExampleComment(oldComment, newComment);
   }
 
+  // Name exclusions management
+  function addNameExclusion() {
+    const trimmed = newNameExclusion.value.trim().toLowerCase();
+    if (!trimmed || nameExclusions.value.includes(trimmed)) {
+      newNameExclusion.value = '';
+      return;
+    }
+    nameExclusions.value = [...nameExclusions.value, trimmed];
+    newNameExclusion.value = '';
+  }
+
+  function removeNameExclusion(exclusion: string) {
+    nameExclusions.value = nameExclusions.value.filter((e) => e !== exclusion);
+  }
+
+  // Vendor toggle
+  function toggleVendor(vendor: string) {
+    if (allowedVendors.value.includes(vendor)) {
+      allowedVendors.value = allowedVendors.value.filter((v) => v !== vendor);
+    } else {
+      allowedVendors.value = [...allowedVendors.value, vendor];
+    }
+  }
+
   // Load settings on mount
   onMounted(() => {
     loadSettings();
@@ -447,6 +539,14 @@ export function useSettingsView() {
     blogContentCharLimit,
     postContentCharLimit,
     maxQueueSize,
+
+    // Model filter state
+    minContextLength,
+    maxAgeDays,
+    maxPrice,
+    allowedVendors,
+    nameExclusions,
+    newNameExclusion,
 
     // UI state
     isLoading,
@@ -477,6 +577,10 @@ export function useSettingsView() {
     maxMatchedPostsOptions: MAX_MATCHED_POSTS_OPTIONS,
     blogContentCharLimitOptions: BLOG_CONTENT_CHAR_LIMIT_OPTIONS,
     postContentCharLimitOptions: POST_CONTENT_CHAR_LIMIT_OPTIONS,
+    contextLengthOptions: CONTEXT_LENGTH_OPTIONS,
+    modelAgeOptions: MODEL_AGE_OPTIONS,
+    maxPriceOptions: MAX_PRICE_OPTIONS,
+    availableVendors,
 
     // Actions
     loadSettings,
@@ -491,5 +595,8 @@ export function useSettingsView() {
     addExample,
     removeExample,
     updateExample,
+    addNameExclusion,
+    removeNameExclusion,
+    toggleVendor,
   };
 }
