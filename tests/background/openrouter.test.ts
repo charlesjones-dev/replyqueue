@@ -155,6 +155,13 @@ describe('OpenRouter API Client', () => {
   describe('getValidRecommendedModels', () => {
     const mockModels: OpenRouterModel[] = [
       {
+        id: 'anthropic/claude-sonnet-4.5',
+        name: 'Claude Sonnet 4.5',
+        context_length: 100000,
+        pricing: { prompt: '0.003', completion: '0.015' },
+        isRecommended: true,
+      },
+      {
         id: 'anthropic/claude-haiku-4.5',
         name: 'Claude Haiku 4.5',
         context_length: 100000,
@@ -167,13 +174,6 @@ describe('OpenRouter API Client', () => {
         context_length: 8192,
         pricing: { prompt: '0.03', completion: '0.06' },
         isRecommended: false,
-      },
-      {
-        id: 'anthropic/claude-sonnet-4.5',
-        name: 'Claude Sonnet 4.5',
-        context_length: 100000,
-        pricing: { prompt: '0.003', completion: '0.015' },
-        isRecommended: true,
       },
     ];
 

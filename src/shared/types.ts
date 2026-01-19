@@ -294,10 +294,14 @@ export interface ModelFilterOptions {
   maxPrice?: number;
   /** Maximum model age in days */
   maxAgeDays?: number;
+  /** Minimum context window size */
+  minContextLength?: number;
+  /** Allowed vendor prefixes (e.g., 'anthropic', 'openai') */
+  allowedVendors?: string[];
+  /** Substrings to exclude from model names (case-insensitive) */
+  nameExclusions?: string[];
   /** Text search query */
   searchQuery?: string;
-  /** Whether to show all models or just recommended */
-  showAll?: boolean;
 }
 
 /**

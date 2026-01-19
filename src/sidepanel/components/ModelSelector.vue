@@ -12,18 +12,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void;
 }>();
 
-const {
-  displayModels,
-  filteredModels,
-  isLoading,
-  error,
-  filterOptions,
-  fetchModels,
-  refreshModels,
-  setSearchQuery,
-  toggleShowAll,
-  formatPrice,
-} = useModels();
+const { filteredModels, isLoading, error, fetchModels, refreshModels, setSearchQuery, formatPrice } = useModels();
 
 const { config } = useConfig();
 
@@ -40,10 +29,7 @@ const selectedModelId = computed(() => props.modelValue ?? config.value.selected
 
 // Get selected model details
 const selectedModel = computed(() => {
-  return (
-    displayModels.value.find((m) => m.id === selectedModelId.value) ||
-    filteredModels.value.find((m) => m.id === selectedModelId.value)
-  );
+  return filteredModels.value.find((m) => m.id === selectedModelId.value);
 });
 
 // Cost tier color
@@ -165,17 +151,6 @@ onMounted(() => {
             </svg>
           </button>
         </div>
-
-        <!-- Show all toggle -->
-        <label class="mt-2 flex items-center gap-2 text-xs">
-          <input
-            type="checkbox"
-            :checked="filterOptions.showAll"
-            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            @change="toggleShowAll"
-          />
-          <span class="text-gray-600">Show all models</span>
-        </label>
       </div>
 
       <!-- Error state -->
@@ -185,7 +160,7 @@ onMounted(() => {
       </div>
 
       <!-- Loading state -->
-      <div v-else-if="isLoading && displayModels.length === 0" class="p-4 text-center">
+      <div v-else-if="isLoading && filteredModels.length === 0" class="p-4 text-center">
         <svg class="mx-auto h-5 w-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -194,12 +169,12 @@ onMounted(() => {
       </div>
 
       <!-- Empty state -->
-      <div v-else-if="displayModels.length === 0" class="p-4 text-center text-sm text-gray-500">No models found</div>
+      <div v-else-if="filteredModels.length === 0" class="p-4 text-center text-sm text-gray-500">No models found</div>
 
       <!-- Model list -->
       <div v-else class="divide-y divide-gray-100">
         <button
-          v-for="model in displayModels"
+          v-for="model in filteredModels"
           :key="model.id"
           type="button"
           class="flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50"

@@ -2,7 +2,7 @@
 import { useSettingsView } from '../composables/useSettingsView';
 import ApiKeyInput from '../components/ApiKeyInput.vue';
 import ExampleCommentsList from '../components/ExampleCommentsList.vue';
-import { RECOMMENDED_MODELS } from '@shared/constants';
+import ModelSelector from '../components/ModelSelector.vue';
 
 const {
   // Form state
@@ -228,14 +228,7 @@ const {
             <h2 class="mb-3 text-sm font-medium text-gray-900">AI Model</h2>
             <div>
               <label class="mb-1 block text-xs text-gray-500"> Selected Model </label>
-              <select
-                v-model="selectedModel"
-                class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option v-for="model in RECOMMENDED_MODELS" :key="model" :value="model">
-                  {{ model }}
-                </option>
-              </select>
+              <ModelSelector v-model="selectedModel" />
               <p class="mt-1 text-xs text-gray-500">
                 This model will be used for AI-powered matching and reply generation.
               </p>

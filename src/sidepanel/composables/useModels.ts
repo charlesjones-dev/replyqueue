@@ -10,6 +10,9 @@ import {
   RECOMMENDED_MODELS,
   DEFAULT_MAX_MODEL_PRICE,
   DEFAULT_MAX_MODEL_AGE_DAYS,
+  DEFAULT_MIN_CONTEXT_LENGTH,
+  DEFAULT_ALLOWED_VENDORS,
+  DEFAULT_MODEL_NAME_EXCLUSIONS,
   COST_TIER_THRESHOLDS,
 } from '@shared/constants';
 
@@ -24,17 +27,23 @@ const fromCache = ref(false);
 const filterOptions = ref<ModelFilterOptions>({
   maxPrice: DEFAULT_MAX_MODEL_PRICE,
   maxAgeDays: DEFAULT_MAX_MODEL_AGE_DAYS,
+  minContextLength: DEFAULT_MIN_CONTEXT_LENGTH,
+  allowedVendors: [...DEFAULT_ALLOWED_VENDORS],
+  nameExclusions: [...DEFAULT_MODEL_NAME_EXCLUSIONS],
   searchQuery: '',
-  showAll: false,
 });
 
 /**
- * Calculate blended price (average of prompt and completion)
+ * Calculate blended price per 1M tokens (weighted: 75% input, 25% output)
+ * OpenRouter returns prices per token, so we multiply by 1M
  */
 function calculateBlendedPrice(pricing: { prompt: string; completion: string }): number {
-  const promptPrice = parseFloat(pricing.prompt) || 0;
-  const completionPrice = parseFloat(pricing.completion) || 0;
-  return (promptPrice + completionPrice) / 2;
+  const inputPricePerToken = parseFloat(pricing.prompt) || 0;
+  const outputPricePerToken = parseFloat(pricing.completion) || 0;
+  // Convert to per 1M tokens and apply 3:1 weighting (input:output)
+  const inputPer1M = inputPricePerToken * 1_000_000;
+  const outputPer1M = outputPricePerToken * 1_000_000;
+  return (3 * inputPer1M + outputPer1M) / 4;
 }
 
 /**
@@ -62,11 +71,25 @@ export function useModels() {
   // Computed values
   const recommendedModels = computed(() => {
     const recommendedSet = new Set<string>(RECOMMENDED_MODELS);
-    return models.value.filter((m) => recommendedSet.has(m.id));
+    const filtered = models.value.filter((m) => recommendedSet.has(m.id));
+    // Sort by RECOMMENDED_MODELS order
+    const orderMap = new Map<string, number>(RECOMMENDED_MODELS.map((id, idx) => [id, idx]));
+    return filtered.sort((a, b) => (orderMap.get(a.id) ?? Infinity) - (orderMap.get(b.id) ?? Infinity));
   });
 
   const filteredModels = computed(() => {
     let result = [...models.value];
+
+    // Apply vendor filter
+    if (filterOptions.value.allowedVendors?.length) {
+      const vendors = filterOptions.value.allowedVendors;
+      result = result.filter((m) => vendors.some((v) => m.id.startsWith(`${v}/`)));
+    }
+
+    // Apply context length filter
+    if (filterOptions.value.minContextLength !== undefined) {
+      result = result.filter((m) => m.context_length >= (filterOptions.value.minContextLength ?? 0));
+    }
 
     // Apply price filter
     if (filterOptions.value.maxPrice !== undefined) {
@@ -85,6 +108,16 @@ export function useModels() {
       });
     }
 
+    // Apply name exclusions filter
+    if (filterOptions.value.nameExclusions?.length) {
+      const exclusions = filterOptions.value.nameExclusions.map((e) => e.toLowerCase());
+      result = result.filter((m) => {
+        const nameLower = m.name.toLowerCase();
+        const idLower = m.id.toLowerCase();
+        return !exclusions.some((ex) => nameLower.includes(ex) || idLower.includes(ex));
+      });
+    }
+
     // Apply search filter
     if (filterOptions.value.searchQuery) {
       const query = filterOptions.value.searchQuery.toLowerCase();
@@ -96,26 +129,25 @@ export function useModels() {
       );
     }
 
-    // Sort: recommended first, then by price
+    // Sort: recommended first (in RECOMMENDED_MODELS order), then by release date (newest first)
+    const recommendedOrder = new Map<string, number>(RECOMMENDED_MODELS.map((id, idx) => [id, idx]));
     result.sort((a, b) => {
-      // Recommended models first
+      // Recommended models first, preserving RECOMMENDED_MODELS order
       if (a.isRecommended && !b.isRecommended) return -1;
       if (!a.isRecommended && b.isRecommended) return 1;
+      if (a.isRecommended && b.isRecommended) {
+        const orderA = recommendedOrder.get(a.id) ?? Infinity;
+        const orderB = recommendedOrder.get(b.id) ?? Infinity;
+        return orderA - orderB;
+      }
 
-      // Then by price (cheaper first)
-      const priceA = calculateBlendedPrice(a.pricing);
-      const priceB = calculateBlendedPrice(b.pricing);
-      return priceA - priceB;
+      // Non-recommended: sort by release date (newest first)
+      const createdA = a.created ?? 0;
+      const createdB = b.created ?? 0;
+      return createdB - createdA;
     });
 
     return result;
-  });
-
-  const displayModels = computed(() => {
-    if (filterOptions.value.showAll) {
-      return filteredModels.value;
-    }
-    return recommendedModels.value;
   });
 
   const hasRecommendedModels = computed(() => recommendedModels.value.length > 0);
@@ -175,16 +207,6 @@ export function useModels() {
   }
 
   /**
-   * Toggle show all models
-   */
-  function toggleShowAll(): void {
-    filterOptions.value = {
-      ...filterOptions.value,
-      showAll: !filterOptions.value.showAll,
-    };
-  }
-
-  /**
    * Get model by ID
    */
   function getModel(modelId: string): OpenRouterModel | undefined {
@@ -214,14 +236,11 @@ export function useModels() {
   }
 
   /**
-   * Format price for display
+   * Format price for display (blended price per 1M tokens)
    */
   function formatPrice(pricing: { prompt: string; completion: string }): string {
     const blendedPrice = calculateBlendedPrice(pricing);
-    if (blendedPrice < 0.01) {
-      return `$${(blendedPrice * 1000).toFixed(3)}/1K`;
-    }
-    return `$${blendedPrice.toFixed(4)}/1M`;
+    return `$${blendedPrice.toFixed(2)}/1M`;
   }
 
   return {
@@ -236,7 +255,6 @@ export function useModels() {
     // Computed
     recommendedModels,
     filteredModels,
-    displayModels,
     hasRecommendedModels,
 
     // Actions
@@ -244,7 +262,6 @@ export function useModels() {
     refreshModels,
     updateFilters,
     setSearchQuery,
-    toggleShowAll,
     getModel,
     isValidModel,
     getModelDisplayInfo,

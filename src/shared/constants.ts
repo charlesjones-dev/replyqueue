@@ -6,8 +6,8 @@ import type { MatchingPreferences } from './types';
 
 // src/shared/constants.ts
 export const RECOMMENDED_MODELS = [
-  'anthropic/claude-sonnet-4.5', // Higher quality option
-  'anthropic/claude-haiku-4.5', // Default - fast, cheap, good for this use case
+  'anthropic/claude-sonnet-4.5', // Default - Higher quality option
+  'anthropic/claude-haiku-4.5', // Faster, cheaper, low quality option
 ] as const;
 
 // Default model - fast, cheap, good enough for matching/reply generation
@@ -123,10 +123,29 @@ export const MODEL_CACHE_TTL = 60 * 60 * 1000;
 export const MAX_STYLE_EXAMPLES_IN_PROMPT = 15;
 
 // Default max price filter for models (per 1M tokens blended)
-export const DEFAULT_MAX_MODEL_PRICE = 10;
+export const DEFAULT_MAX_MODEL_PRICE = 6;
 
-// Default max age filter for models (in days)
-export const DEFAULT_MAX_MODEL_AGE_DAYS = 365;
+// Default max age filter for models (in days) - 7 months
+export const DEFAULT_MAX_MODEL_AGE_DAYS = 210;
+
+// Default minimum context window size
+export const DEFAULT_MIN_CONTEXT_LENGTH = 200000;
+
+// Allowed model vendors (prefix matching against model ID)
+export const DEFAULT_ALLOWED_VENDORS = ['anthropic', 'google', 'openai', 'x-ai'] as const;
+
+// Model name substrings to exclude (case-insensitive)
+export const DEFAULT_MODEL_NAME_EXCLUSIONS = [
+  'image',
+  'flash',
+  'nano',
+  'mini',
+  '-mini',
+  'fast',
+  'lite',
+  'codex',
+  'thinking',
+] as const;
 
 // Number of reply suggestions to generate per post
 export const REPLY_SUGGESTIONS_COUNT = 3;
