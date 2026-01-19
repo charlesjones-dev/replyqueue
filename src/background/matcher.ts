@@ -266,11 +266,10 @@ export function mergeMatches(
     }
   }
 
-  // Add any existing matches not in new results that haven't been acted on
+  // Add all remaining existing matches (not in new results)
+  // These should be preserved since they were already evaluated and matched
   for (const existing of existingMap.values()) {
-    if (existing.status !== 'pending') {
-      merged.push(existing);
-    }
+    merged.push(existing);
   }
 
   // Sort by score descending

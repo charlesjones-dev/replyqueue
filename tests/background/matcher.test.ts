@@ -217,7 +217,7 @@ describe('Matcher', () => {
       expect(merged[0].score).toBe(0.8); // Score should be updated
     });
 
-    it('should add new matches not in existing', () => {
+    it('should add new matches while keeping existing matches', () => {
       const existing = [
         createTestMatch({
           post: createTestPost({ id: 'post-1' }),
@@ -232,28 +232,35 @@ describe('Matcher', () => {
 
       const merged = mergeMatches(existing, newMatches);
 
-      expect(merged.length).toBe(1); // Only new matches by default
+      expect(merged.length).toBe(2); // Both existing and new matches should be kept
+      expect(merged.some((m) => m.post.id === 'post-1')).toBe(true);
       expect(merged.some((m) => m.post.id === 'post-2')).toBe(true);
     });
 
-    it('should keep non-pending existing matches', () => {
+    it('should keep existing matches regardless of status', () => {
       const existing = [
         createTestMatch({
           post: createTestPost({ id: 'post-1' }),
+          status: 'pending',
+        }),
+        createTestMatch({
+          post: createTestPost({ id: 'post-2' }),
           status: 'replied',
         }),
       ];
 
       const newMatches = [
         createTestMatch({
-          post: createTestPost({ id: 'post-2' }),
+          post: createTestPost({ id: 'post-3' }),
         }),
       ];
 
       const merged = mergeMatches(existing, newMatches);
 
+      expect(merged.length).toBe(3);
       expect(merged.some((m) => m.post.id === 'post-1')).toBe(true);
       expect(merged.some((m) => m.post.id === 'post-2')).toBe(true);
+      expect(merged.some((m) => m.post.id === 'post-3')).toBe(true);
     });
 
     it('should respect maxMatchedPosts limit', () => {
