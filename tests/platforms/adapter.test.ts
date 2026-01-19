@@ -61,7 +61,6 @@ describe('LinkedInAdapter', () => {
       expect(typeof adapter.extractPost).toBe('function');
       expect(typeof adapter.getPostId).toBe('function');
       expect(typeof adapter.getPostUrl).toBe('function');
-      expect(typeof adapter.scrollToPost).toBe('function');
       expect(typeof adapter.findPostElements).toBe('function');
     });
   });
@@ -108,7 +107,6 @@ describe('PlatformAdapter interface', () => {
       expect(typeof adapter.extractPost).toBe('function');
       expect(typeof adapter.getPostId).toBe('function');
       expect(typeof adapter.getPostUrl).toBe('function');
-      expect(typeof adapter.scrollToPost).toBe('function');
       expect(typeof adapter.findPostElements).toBe('function');
 
       // Verify method return types

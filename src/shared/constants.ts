@@ -2,16 +2,17 @@
  * Constants for ReplyQueue extension
  */
 
-import type { MatchingPreferences, ModelFilterOptions } from './types';
+import type { MatchingPreferences, ModelFilterOptions, ThemePreference } from './types';
 
 // src/shared/constants.ts
 export const RECOMMENDED_MODELS = [
-  'anthropic/claude-sonnet-4.5', // Default - Higher quality option
+  'openai/gpt-5.2', // Default - High quality and good price balance
+  'anthropic/claude-sonnet-4.5', // Higher quality but more expensive
   'anthropic/claude-haiku-4.5', // Faster, cheaper, low quality option
 ] as const;
 
 // Default model - fast, cheap, good enough for matching/reply generation
-export const DEFAULT_MODEL = 'claude-sonnet-4.5';
+export const DEFAULT_MODEL = 'openai/gpt-5.2';
 
 // Default matching preferences
 export const DEFAULT_MATCHING_PREFERENCES: MatchingPreferences = {
@@ -49,6 +50,15 @@ export const POST_CONTENT_CHAR_LIMIT_OPTIONS = [
 // Default max matched posts (configurable limit for matched posts after AI analysis)
 export const DEFAULT_MAX_MATCHED_POSTS = 100;
 
+// Default max RSS items to fetch from feed
+export const DEFAULT_MAX_RSS_ITEMS = 25;
+
+// Default max blog items to include in AI prompts
+export const DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT = 25;
+
+// Default theme preference (uses system setting)
+export const DEFAULT_THEME_PREFERENCE: ThemePreference = 'system';
+
 export const DEFAULT_CONFIG: {
   apiKey: string;
   rssFeedUrl: string;
@@ -61,7 +71,10 @@ export const DEFAULT_CONFIG: {
   postContentCharLimit: number;
   maxQueueSize: number;
   maxMatchedPosts: number;
+  maxRssItems: number;
+  maxBlogItemsInPrompt: number;
   modelFilterPreferences: ModelFilterOptions;
+  themePreference: ThemePreference;
 } = {
   apiKey: '',
   rssFeedUrl: '',
@@ -74,6 +87,8 @@ export const DEFAULT_CONFIG: {
   postContentCharLimit: DEFAULT_POST_CONTENT_CHAR_LIMIT,
   maxQueueSize: DEFAULT_MAX_QUEUE_SIZE,
   maxMatchedPosts: DEFAULT_MAX_MATCHED_POSTS,
+  maxRssItems: DEFAULT_MAX_RSS_ITEMS,
+  maxBlogItemsInPrompt: DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT,
   modelFilterPreferences: {
     maxPrice: 6,
     maxAgeDays: 180,
@@ -81,6 +96,7 @@ export const DEFAULT_CONFIG: {
     allowedVendors: ['anthropic', 'google', 'openai', 'x-ai'],
     nameExclusions: ['image', 'flash', 'nano', 'mini', '-mini', 'fast', 'lite', 'codex', 'thinking'],
   },
+  themePreference: DEFAULT_THEME_PREFERENCE,
 };
 
 export const OPENROUTER_API_BASE = 'https://openrouter.ai/api/v1';
@@ -116,6 +132,12 @@ export const CACHE_TTL_OPTIONS = [15, 30, 60, 120, 240] as const;
 
 // Max matched posts options (configurable)
 export const MAX_MATCHED_POSTS_OPTIONS = [25, 50, 100, 150, 200] as const;
+
+// Max RSS items options (how many blog posts to fetch from feed)
+export const MAX_RSS_ITEMS_OPTIONS = [10, 25, 50, 100] as const;
+
+// Max blog items in AI prompt options (how many blog posts to include in AI prompts)
+export const MAX_BLOG_ITEMS_IN_PROMPT_OPTIONS = [5, 10, 25, 50] as const;
 
 // Relevance threshold presets
 export const THRESHOLD_PRESETS = {

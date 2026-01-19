@@ -62,8 +62,7 @@ replyqueue/
 │   ├── sidepanel/      # Vue 3 side panel UI
 │   └── shared/         # Shared utilities and types
 ├── tests/              # Test files (mirrors src/ structure)
-├── public/             # Static assets
-└── docs/               # Documentation
+└── public/             # Static assets
 ```
 
 ---
@@ -118,7 +117,15 @@ const doubled = computed(() => count.value * 2)
 
 ### Formatting
 
-The project uses default Vite/TypeScript formatting. Key points:
+The project uses Prettier for formatting and ESLint for linting:
+
+```bash
+pnpm lint        # Check for lint errors
+pnpm lint:fix    # Auto-fix lint issues
+pnpm format      # Format code with Prettier
+```
+
+Key formatting rules:
 - 2 spaces for indentation
 - Single quotes for strings
 - No semicolons (unless required)
@@ -217,12 +224,18 @@ Use descriptive branch names:
    pnpm test
    ```
 
-4. **Build the extension**
+4. **Lint and format**
+   ```bash
+   pnpm lint:fix    # Fix lint issues
+   pnpm format      # Format with Prettier
+   ```
+
+5. **Build the extension**
    ```bash
    pnpm build
    ```
 
-5. **Test manually**
+6. **Test manually**
    - Load the extension in Chrome
    - Test your changes in a real scenario
 
@@ -250,7 +263,10 @@ Use descriptive branch names:
 
 ## Checklist
 - [ ] Code follows project style
-- [ ] Tests pass locally
+- [ ] Linting passes (`pnpm lint`)
+- [ ] Code formatted (`pnpm format`)
+- [ ] Tests pass locally (`pnpm test`)
+- [ ] Build succeeds (`pnpm build`)
 - [ ] Documentation updated
 - [ ] No console.log in production code
 ```

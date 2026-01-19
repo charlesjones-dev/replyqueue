@@ -339,6 +339,17 @@ export async function clearAllCaches(): Promise<void> {
 }
 
 /**
+ * Reset extension to initial state
+ * Clears API key, resets config to defaults, and clears all caches
+ */
+export async function resetConfig(): Promise<void> {
+  await clearApiKey();
+  await set(STORAGE_KEYS.CONFIG, { ...DEFAULT_CONFIG, apiKey: '' });
+  await clearAllCaches();
+  await clearExampleComments();
+}
+
+/**
  * Get all storage data
  */
 export async function getAllData(): Promise<StorageData> {
@@ -431,6 +442,17 @@ export async function addEvaluatedPostIds(newIds: string[]): Promise<void> {
   const existing = await getEvaluatedPostIds();
   for (const id of newIds) {
     existing.add(id);
+  }
+  await saveEvaluatedPostIds(existing);
+}
+
+/**
+ * Remove post IDs from the evaluated set
+ */
+export async function removeEvaluatedPostIds(idsToRemove: string[]): Promise<void> {
+  const existing = await getEvaluatedPostIds();
+  for (const id of idsToRemove) {
+    existing.delete(id);
   }
   await saveEvaluatedPostIds(existing);
 }
@@ -643,6 +665,21 @@ export async function skipQueuedPost(postId: string, platform: string): Promise<
   await addEvaluatedPostIds([key]);
 }
 
+/**
+ * Unskip a post and move it back to queue
+ * Removes the post from matchedPostsWithScore and evaluatedPostIds
+ */
+export async function unskipPost(postId: string, platform: string): Promise<void> {
+  // Remove from matchedPostsWithScore
+  const matchedPosts = await getMatchedPostsWithScore();
+  const filtered = matchedPosts.filter((p) => !(p.post.id === postId && p.post.platform === platform));
+  await saveMatchedPostsWithScore(filtered);
+
+  // Remove from evaluatedPostIds so it appears in queue again
+  const key = `${platform}:${postId}`;
+  await removeEvaluatedPostIds([key]);
+}
+
 // ============================================================
 // Export storage object
 // ============================================================
@@ -659,6 +696,7 @@ export const storage = {
   getConfig,
   saveConfig,
   updateConfig,
+  resetConfig,
   getMatchedPosts,
   saveMatchedPosts,
   getExtractedPosts,
@@ -676,10 +714,13 @@ export const storage = {
   clearMatchedPostsWithScore,
   // Skip queued post
   skipQueuedPost,
+  // Unskip post
+  unskipPost,
   // Evaluated post IDs
   getEvaluatedPostIds,
   saveEvaluatedPostIds,
   addEvaluatedPostIds,
+  removeEvaluatedPostIds,
   clearEvaluatedPostIds,
   // Cached RSS feed
   getCachedRssFeed,

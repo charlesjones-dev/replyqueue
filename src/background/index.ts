@@ -31,12 +31,15 @@ import {
   addEvaluatedPostIds,
   getEvaluatedPostIds,
   skipQueuedPost,
+  unskipPost,
 } from '../shared/storage';
 import {
   DEFAULT_MATCHING_PREFERENCES,
   DEFAULT_MAX_MATCHED_POSTS,
   DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
   DEFAULT_POST_CONTENT_CHAR_LIMIT,
+  DEFAULT_MAX_RSS_ITEMS,
+  DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT,
 } from '../shared/constants';
 import { fetchRssFeed } from './rss-fetcher';
 import { mergeMatches, aiMatchPosts, generateReplySuggestions, heatCheckPosts } from './matcher';
@@ -194,15 +197,22 @@ async function handleFetchRss(): Promise<MessageResponse<{ feedTitle: string; it
     }
 
     const preferences = config.matchingPreferences ?? DEFAULT_MATCHING_PREFERENCES;
+    const maxRssItems = config.maxRssItems ?? DEFAULT_MAX_RSS_ITEMS;
 
     console.log(`${LOG_PREFIX} Fetching RSS feed from ${config.rssFeedUrl}`);
 
     // Always fetch fresh feed when explicitly requested
     const feed = await fetchRssFeed(config.rssFeedUrl);
 
+    // Apply maxRssItems limit
+    const limitedFeed = {
+      ...feed,
+      items: feed.items.slice(0, maxRssItems),
+    };
+
     // Cache it
     const newCache: CachedRssFeed = {
-      feed,
+      feed: limitedFeed,
       fetchedAt: Date.now(),
       ttl: preferences.cacheTtlMinutes * 60 * 1000,
       url: config.rssFeedUrl,
@@ -212,13 +222,15 @@ async function handleFetchRss(): Promise<MessageResponse<{ feedTitle: string; it
     // Update last fetch time
     await updateConfig({ lastFetchTime: Date.now() });
 
-    console.log(`${LOG_PREFIX} Cached RSS feed "${feed.title}" with ${feed.items.length} items`);
+    console.log(
+      `${LOG_PREFIX} Cached RSS feed "${limitedFeed.title}" with ${limitedFeed.items.length} items (limited from ${feed.items.length})`
+    );
 
     return {
       success: true,
       data: {
-        feedTitle: feed.title,
-        itemCount: feed.items.length,
+        feedTitle: limitedFeed.title,
+        itemCount: limitedFeed.items.length,
       },
     };
   } catch (error) {
@@ -243,6 +255,18 @@ async function handleValidateRssFeed(
   }
 
   try {
+    // Check if we have permission to access this URL's origin
+    const origin = getOriginPattern(url.trim());
+    const hasPermission = await chrome.permissions.contains({ origins: [origin] });
+
+    if (!hasPermission) {
+      console.log(`${LOG_PREFIX} Missing permission for ${origin}, returning RSS_PERMISSION_REQUIRED`);
+      return {
+        success: false,
+        error: 'RSS_PERMISSION_REQUIRED',
+      };
+    }
+
     const response = await fetch(url.trim(), {
       method: 'GET',
       headers: {
@@ -338,8 +362,9 @@ async function handleFetchModels(
 /**
  * Handle AI_MATCH_POSTS message
  * Performs AI-based semantic matching
+ * If postIds provided, only matches those specific posts
  */
-async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
+async function handleAIMatchPosts(message: ExtensionMessage): Promise<MessageResponse<MatchResult>> {
   try {
     const config = await getConfig();
 
@@ -406,13 +431,31 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
     // Get extracted posts and filter to only queued posts (not yet evaluated)
     const allExtractedPosts = await getExtractedPosts();
     const alreadyEvaluatedIds = await getEvaluatedPostIds();
-    const extractedPosts = allExtractedPosts.filter((p) => {
-      const key = `${p.platform}:${p.id}`;
-      return !alreadyEvaluatedIds.has(key);
-    });
-    console.log(
-      `${LOG_PREFIX} AI matching ${extractedPosts.length} queued posts (${allExtractedPosts.length} total, ${alreadyEvaluatedIds.size} already evaluated)`
-    );
+
+    // Check if specific postIds were requested
+    const requestedPostIds = (message as { postIds?: string[] }).postIds;
+
+    let extractedPosts: ExtractedPostRecord[];
+    if (requestedPostIds && requestedPostIds.length > 0) {
+      // Filter to only the requested posts (must exist and not already evaluated)
+      const requestedSet = new Set(requestedPostIds);
+      extractedPosts = allExtractedPosts.filter((p) => {
+        const key = `${p.platform}:${p.id}`;
+        return requestedSet.has(key) && !alreadyEvaluatedIds.has(key);
+      });
+      console.log(
+        `${LOG_PREFIX} AI matching ${extractedPosts.length} selected posts (${requestedPostIds.length} requested, ${alreadyEvaluatedIds.size} already evaluated)`
+      );
+    } else {
+      // Match all queued posts (not yet evaluated)
+      extractedPosts = allExtractedPosts.filter((p) => {
+        const key = `${p.platform}:${p.id}`;
+        return !alreadyEvaluatedIds.has(key);
+      });
+      console.log(
+        `${LOG_PREFIX} AI matching ${extractedPosts.length} queued posts (${allExtractedPosts.length} total, ${alreadyEvaluatedIds.size} already evaluated)`
+      );
+    }
 
     if (extractedPosts.length === 0) {
       return {
@@ -439,6 +482,9 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
     // Get max matched posts from config
     const maxMatchedPosts = config.maxMatchedPosts ?? DEFAULT_MAX_MATCHED_POSTS;
 
+    // Get max blog items for AI prompts
+    const maxBlogItemsInPrompt = config.maxBlogItemsInPrompt ?? DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT;
+
     // Perform AI matching
     const matchResult = await aiMatchPosts(
       extractedPosts,
@@ -451,7 +497,8 @@ async function handleAIMatchPosts(): Promise<MessageResponse<MatchResult>> {
       maxMatchedPosts,
       config.communicationPreferences ?? '',
       blogContentCharLimit,
-      postContentCharLimit
+      postContentCharLimit,
+      maxBlogItemsInPrompt
     );
 
     // Mark all evaluated posts as processed (whether they matched or not)
@@ -557,6 +604,9 @@ async function handleGenerateSuggestions(
     // Get blog content character limit
     const blogContentCharLimit = config.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT;
 
+    // Get max blog items for AI prompts
+    const maxBlogItemsInPrompt = config.maxBlogItemsInPrompt ?? DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT;
+
     // Generate suggestions
     const suggestions = await generateReplySuggestions(
       post,
@@ -566,7 +616,8 @@ async function handleGenerateSuggestions(
       config.selectedModel,
       exampleComments,
       config.communicationPreferences ?? '',
-      blogContentCharLimit
+      blogContentCharLimit,
+      maxBlogItemsInPrompt
     );
 
     // Update the matched post with new suggestions
@@ -768,6 +819,98 @@ async function handleSkipQueuedPost(message: ExtensionMessage): Promise<MessageR
 }
 
 /**
+ * Handle ENSURE_CONTENT_SCRIPT message
+ * Ensures content script is injected and extracting on the active tab
+ * Handles the case where side panel opens on an already-loaded LinkedIn page
+ */
+async function handleEnsureContentScript(): Promise<MessageResponse> {
+  try {
+    // Get the active tab
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const activeTab = tabs[0];
+
+    if (!activeTab?.id || !activeTab.url) {
+      console.log(`${LOG_PREFIX} No active tab found`);
+      return { success: false, error: 'No active tab found' };
+    }
+
+    // Check if it's a LinkedIn URL
+    if (!ALLOWED_CONTENT_SCRIPT_ORIGINS.test(activeTab.url)) {
+      console.log(`${LOG_PREFIX} Active tab is not LinkedIn: ${activeTab.url}`);
+      return { success: false, error: 'Not a LinkedIn page' };
+    }
+
+    const tabId = activeTab.id;
+
+    // Try to send START_EXTRACTION to the content script
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: 'START_EXTRACTION' });
+      console.log(`${LOG_PREFIX} Content script already running on tab ${tabId}`);
+      return { success: true, data: { injected: false } };
+    } catch {
+      // Content script not running, need to inject it
+      console.log(`${LOG_PREFIX} Content script not found on tab ${tabId}, injecting...`);
+    }
+
+    // Get the content script path from the manifest
+    const manifest = chrome.runtime.getManifest();
+    const contentScriptPath = manifest.content_scripts?.[0]?.js?.[0];
+
+    if (!contentScriptPath) {
+      console.error(`${LOG_PREFIX} Could not find content script path in manifest`);
+      return { success: false, error: 'Content script path not found in manifest' };
+    }
+
+    // Inject the content script
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: [contentScriptPath],
+    });
+
+    console.log(`${LOG_PREFIX} Content script injected on tab ${tabId}`);
+
+    // Wait a moment for the content script to initialize
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // Now send START_EXTRACTION
+    try {
+      await chrome.tabs.sendMessage(tabId, { type: 'START_EXTRACTION' });
+      console.log(`${LOG_PREFIX} Extraction started after injection on tab ${tabId}`);
+    } catch (error) {
+      console.warn(`${LOG_PREFIX} Failed to start extraction after injection:`, error);
+    }
+
+    return { success: true, data: { injected: true } };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`${LOG_PREFIX} Error ensuring content script:`, error);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Handle UNSKIP_POST message
+ * Moves a skipped post back to the queue
+ */
+async function handleUnskipPost(message: ExtensionMessage): Promise<MessageResponse> {
+  const { postId, platform } = message as { postId: string; platform: string };
+
+  if (!postId || !platform) {
+    return { success: false, error: 'Post ID and platform are required' };
+  }
+
+  try {
+    await unskipPost(postId, platform);
+    console.log(`${LOG_PREFIX} Unskipped post ${postId} from ${platform}`);
+    return { success: true };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`${LOG_PREFIX} Error unskipping post:`, error);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
  * Main message handler
  */
 chrome.runtime.onMessage.addListener(
@@ -819,7 +962,7 @@ chrome.runtime.onMessage.addListener(
           return handleFetchModels(message);
 
         case 'AI_MATCH_POSTS':
-          return handleAIMatchPosts();
+          return handleAIMatchPosts(message);
 
         case 'GENERATE_SUGGESTIONS':
         case 'REGENERATE_SUGGESTIONS':
@@ -831,11 +974,17 @@ chrome.runtime.onMessage.addListener(
         case 'SKIP_QUEUED_POST':
           return handleSkipQueuedPost(message);
 
+        case 'UNSKIP_POST':
+          return handleUnskipPost(message);
+
         case 'CHECK_HOST_PERMISSION':
           return handleCheckHostPermission(message);
 
         case 'REQUEST_HOST_PERMISSION':
           return handleRequestHostPermission(message);
+
+        case 'ENSURE_CONTENT_SCRIPT':
+          return handleEnsureContentScript();
 
         default:
           console.log(`${LOG_PREFIX} Unhandled message type: ${message.type}`);

@@ -10,30 +10,30 @@ const platformInfo = computed(() => {
     case 'linkedin':
       return {
         name: 'LinkedIn',
-        bgColor: 'bg-blue-100',
-        textColor: 'text-blue-700',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/50',
+        textColor: 'text-blue-700 dark:text-blue-300',
         icon: 'linkedin',
       };
     case 'twitter':
     case 'x':
       return {
         name: 'X',
-        bgColor: 'bg-gray-100',
-        textColor: 'text-gray-700',
+        bgColor: 'bg-gray-100 dark:bg-gray-700',
+        textColor: 'text-gray-700 dark:text-gray-300',
         icon: 'twitter',
       };
     case 'facebook':
       return {
         name: 'Facebook',
-        bgColor: 'bg-blue-100',
-        textColor: 'text-blue-600',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/50',
+        textColor: 'text-blue-600 dark:text-blue-300',
         icon: 'facebook',
       };
     default:
       return {
         name: props.platform,
-        bgColor: 'bg-gray-100',
-        textColor: 'text-gray-600',
+        bgColor: 'bg-gray-100 dark:bg-gray-700',
+        textColor: 'text-gray-600 dark:text-gray-300',
         icon: 'default',
       };
   }

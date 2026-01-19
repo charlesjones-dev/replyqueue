@@ -118,13 +118,6 @@ export interface PlatformAdapter {
   getPostUrl(postId: string): string;
 
   /**
-   * Scroll the page to a specific post
-   * @param postId The post's unique identifier
-   * @returns true if post was found and scrolled to, false otherwise
-   */
-  scrollToPost(postId: string): boolean;
-
-  /**
    * Find all post elements currently in the DOM
    */
   findPostElements(): Element[];

@@ -9,11 +9,9 @@ import {
   sendTabMessage,
   isPostsExtractedMessage,
   isContentScriptReadyMessage,
-  isScrollToPostMessage,
   type ExtensionMessage,
   type PostsExtractedMessage,
   type ContentScriptReadyMessage,
-  type ScrollToPostMessage,
 } from '../../src/shared/messages';
 import type { ExtractedPost } from '../../src/platforms/types';
 
@@ -54,23 +52,6 @@ describe('Message Type Guards', () => {
         config: {},
       };
       expect(isContentScriptReadyMessage(message)).toBe(false);
-    });
-  });
-
-  describe('isScrollToPostMessage', () => {
-    it('should return true for valid ScrollToPostMessage', () => {
-      const message: ScrollToPostMessage = {
-        type: 'SCROLL_TO_POST',
-        postId: '123456',
-      };
-      expect(isScrollToPostMessage(message)).toBe(true);
-    });
-
-    it('should return false for other message types', () => {
-      const message: ExtensionMessage = {
-        type: 'START_EXTRACTION',
-      };
-      expect(isScrollToPostMessage(message)).toBe(false);
     });
   });
 });

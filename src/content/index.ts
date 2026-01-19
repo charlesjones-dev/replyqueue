@@ -119,7 +119,13 @@ function handleMessage(
   switch (message.type) {
     case 'START_EXTRACTION':
       if (extractor) {
-        extractor.start();
+        // If already running, force a rescan of existing posts
+        // This handles the case where side panel opens after page load
+        if (extractor.running) {
+          extractor.forceRescan();
+        } else {
+          extractor.start();
+        }
         sendResponse({ success: true });
       } else {
         sendResponse({ success: false, error: 'Extractor not initialized' });
@@ -144,15 +150,6 @@ function handleMessage(
       sendResponse({ success: true, data: statusResponse });
       break;
     }
-
-    case 'SCROLL_TO_POST':
-      if (adapter && message.postId) {
-        const found = adapter.scrollToPost(message.postId);
-        sendResponse({ success: found, error: found ? undefined : 'Post not found in DOM' });
-      } else {
-        sendResponse({ success: false, error: 'Adapter not initialized or missing postId' });
-      }
-      break;
 
     default:
       // Unknown message type, acknowledge but do nothing

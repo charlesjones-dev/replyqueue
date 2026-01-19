@@ -8,6 +8,7 @@ const {
   rssFeedUrl,
   isValidatingApiKey,
   isValidatingFeed,
+  isResetting,
   apiKeyValidation,
   feedValidation,
   canCompleteSetup,
@@ -15,16 +16,17 @@ const {
   validateFeedUrl,
   finishSetup,
   goToStep1,
+  resetAndClearConfig,
 } = useSetup();
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 p-4">
+  <div class="min-h-screen bg-gray-50 p-4 dark:bg-gray-900">
     <div class="mx-auto max-w-md">
       <!-- Header -->
       <div class="mb-8 text-center">
-        <h1 class="text-2xl font-bold text-gray-900">ReplyQueue</h1>
-        <p class="mt-2 text-sm text-gray-600">Set up your extension to start monitoring posts</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">ReplyQueue</h1>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">Set up your extension to start monitoring posts</p>
       </div>
 
       <!-- Progress indicator -->
@@ -32,19 +34,27 @@ const {
         <div class="flex items-center justify-center space-x-4">
           <div
             class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium"
-            :class="currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'"
+            :class="
+              currentStep >= 1
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+            "
           >
             1
           </div>
-          <div class="h-1 w-16" :class="currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'" />
+          <div class="h-1 w-16" :class="currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'" />
           <div
             class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium"
-            :class="currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'"
+            :class="
+              currentStep >= 2
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+            "
           >
             2
           </div>
         </div>
-        <div class="mt-2 flex justify-between text-xs text-gray-500">
+        <div class="mt-2 flex justify-between text-xs text-gray-500 dark:text-gray-400">
           <span class="w-24 text-center">API Key</span>
           <span class="w-24 text-center">RSS Feed</span>
         </div>
@@ -53,25 +63,30 @@ const {
       <!-- Step 1: API Key -->
       <div v-if="currentStep === 1" class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700"> OpenRouter API Key </label>
-          <p class="mt-1 text-xs text-gray-500">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300"> OpenRouter API Key </label>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Get your API key from
-            <a href="https://openrouter.ai/keys" target="_blank" class="text-blue-600 hover:underline"
+            <a
+              href="https://openrouter.ai/keys"
+              target="_blank"
+              class="text-blue-600 hover:underline dark:text-blue-400"
               >openrouter.ai/keys</a
             >
           </p>
           <div class="mt-2">
             <ApiKeyInput v-model="apiKey" :disabled="isValidatingApiKey" :error="apiKeyValidation?.error" />
           </div>
-          <p v-if="apiKeyValidation?.error" class="mt-1 text-sm text-red-600">
+          <p v-if="apiKeyValidation?.error" class="mt-1 text-sm text-red-600 dark:text-red-400">
             {{ apiKeyValidation.error }}
           </p>
-          <p v-if="apiKeyValidation?.valid" class="mt-1 text-sm text-green-600">API key validated successfully</p>
+          <p v-if="apiKeyValidation?.valid" class="mt-1 text-sm text-green-600 dark:text-green-400">
+            API key validated successfully
+          </p>
         </div>
 
         <button
           type="button"
-          class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-700 dark:hover:bg-blue-600 dark:focus:ring-offset-gray-900"
           :disabled="!apiKey || isValidatingApiKey"
           @click="validateApiKey"
         >
@@ -88,44 +103,57 @@ const {
           </span>
           <span v-else>Validate Key</span>
         </button>
+
+        <!-- Reset link -->
+        <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            class="text-sm text-gray-500 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:text-red-400"
+            :disabled="isResetting"
+            @click="resetAndClearConfig"
+          >
+            <span v-if="isResetting">Resetting...</span>
+            <span v-else>Reset Extension</span>
+          </button>
+        </div>
       </div>
 
       <!-- Step 2: RSS Feed -->
       <div v-if="currentStep === 2" class="space-y-4">
         <div class="flex items-center justify-between">
-          <button type="button" class="text-sm text-blue-600 hover:underline" @click="goToStep1">
+          <button type="button" class="text-sm text-blue-600 hover:underline dark:text-blue-400" @click="goToStep1">
             Back to API Key
           </button>
-          <span class="text-sm text-green-600">API Key verified</span>
+          <span class="text-sm text-green-600 dark:text-green-400">API Key verified</span>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700"> RSS Feed URL </label>
-          <p class="mt-1 text-xs text-gray-500">Enter the RSS feed URL to monitor for new posts</p>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300"> RSS Feed URL </label>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Enter the RSS feed URL to monitor for new posts</p>
           <div class="mt-2">
             <input
               v-model="rssFeedUrl"
               type="url"
               placeholder="https://example.com/feed.xml"
               :disabled="isValidatingFeed"
-              class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:disabled:bg-gray-600"
               :class="{
                 'border-red-500 focus:border-red-500 focus:ring-red-500': feedValidation?.error,
               }"
             />
           </div>
-          <p v-if="feedValidation?.error" class="mt-1 text-sm text-red-600">
+          <p v-if="feedValidation?.error" class="mt-1 text-sm text-red-600 dark:text-red-400">
             {{ feedValidation.error }}
           </p>
-          <div v-if="feedValidation?.valid" class="mt-1 text-sm text-green-600">
+          <div v-if="feedValidation?.valid" class="mt-1 text-sm text-green-600 dark:text-green-400">
             <p>Feed validated: {{ feedValidation.feedTitle }}</p>
-            <p class="text-xs text-gray-500">{{ feedValidation.itemCount }} items found</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">{{ feedValidation.itemCount }} items found</p>
           </div>
         </div>
 
         <button
           type="button"
-          class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-blue-700 dark:hover:bg-blue-600 dark:focus:ring-offset-gray-900"
           :disabled="!rssFeedUrl || isValidatingFeed"
           @click="validateFeedUrl"
         >
@@ -145,12 +173,25 @@ const {
 
         <button
           type="button"
-          class="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          class="w-full rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-green-700 dark:hover:bg-green-600 dark:focus:ring-offset-gray-900"
           :disabled="!canCompleteSetup"
           @click="finishSetup"
         >
           Complete Setup
         </button>
+
+        <!-- Reset link -->
+        <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            type="button"
+            class="text-sm text-gray-500 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:text-red-400"
+            :disabled="isResetting"
+            @click="resetAndClearConfig"
+          >
+            <span v-if="isResetting">Resetting...</span>
+            <span v-else>Reset Extension</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

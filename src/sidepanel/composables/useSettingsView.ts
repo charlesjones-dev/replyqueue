@@ -7,7 +7,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import type { MatchingPreferences } from '@shared/types';
 import { useConfig } from './useConfig';
 import { useAppState } from './useAppState';
-import { validateApiKeyWithServer, validateRssFeed } from '@shared/validation';
+import { validateApiKeyWithServer, validateRssFeed, validateRssUrlFormat } from '@shared/validation';
 import {
   getExampleComments,
   saveExampleComments,
@@ -39,12 +39,24 @@ import {
   CONTEXT_LENGTH_OPTIONS,
   MODEL_AGE_OPTIONS,
   MAX_PRICE_OPTIONS,
+  DEFAULT_MAX_RSS_ITEMS,
+  DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT,
+  MAX_RSS_ITEMS_OPTIONS,
+  MAX_BLOG_ITEMS_IN_PROMPT_OPTIONS,
 } from '@shared/constants';
 import { useModels } from './useModels';
 
+/**
+ * Extract origin pattern from URL for permission requests
+ */
+function getOriginPattern(url: string): string {
+  const parsed = new URL(url);
+  return `${parsed.protocol}//${parsed.host}/*`;
+}
+
 export function useSettingsView() {
-  const { config, loadConfig, update } = useConfig();
-  const { closeSettings } = useAppState();
+  const { config, loadConfig, update, resetAllConfig } = useConfig();
+  const { closeSettings, openSetup } = useAppState();
   const { syncFiltersFromConfig, availableVendors } = useModels();
 
   // Form state
@@ -60,6 +72,8 @@ export function useSettingsView() {
   const blogContentCharLimit = ref(DEFAULT_BLOG_CONTENT_CHAR_LIMIT);
   const postContentCharLimit = ref(DEFAULT_POST_CONTENT_CHAR_LIMIT);
   const maxQueueSize = ref(DEFAULT_MAX_QUEUE_SIZE);
+  const maxRssItems = ref(DEFAULT_MAX_RSS_ITEMS);
+  const maxBlogItemsInPrompt = ref(DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT);
 
   // Model filter state
   const minContextLength = ref(DEFAULT_MIN_CONTEXT_LENGTH);
@@ -75,6 +89,7 @@ export function useSettingsView() {
   const isTestingApiKey = ref(false);
   const isTestingFeed = ref(false);
   const isClearingCache = ref(false);
+  const isResetting = ref(false);
   const cacheCleared = ref(false);
   const hasUnsavedChanges = ref(false);
   const showUnsavedWarning = ref(false);
@@ -105,6 +120,8 @@ export function useSettingsView() {
     blogContentCharLimit: DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
     postContentCharLimit: DEFAULT_POST_CONTENT_CHAR_LIMIT,
     maxQueueSize: DEFAULT_MAX_QUEUE_SIZE,
+    maxRssItems: DEFAULT_MAX_RSS_ITEMS,
+    maxBlogItemsInPrompt: DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT,
     minContextLength: DEFAULT_MIN_CONTEXT_LENGTH,
     maxAgeDays: DEFAULT_MAX_MODEL_AGE_DAYS,
     maxPrice: DEFAULT_MAX_MODEL_PRICE,
@@ -153,6 +170,8 @@ export function useSettingsView() {
       blogContentCharLimit,
       postContentCharLimit,
       maxQueueSize,
+      maxRssItems,
+      maxBlogItemsInPrompt,
       minContextLength,
       maxAgeDays,
       maxPrice,
@@ -181,6 +200,8 @@ export function useSettingsView() {
       blogContentCharLimit.value !== originalValues.value.blogContentCharLimit ||
       postContentCharLimit.value !== originalValues.value.postContentCharLimit ||
       maxQueueSize.value !== originalValues.value.maxQueueSize ||
+      maxRssItems.value !== originalValues.value.maxRssItems ||
+      maxBlogItemsInPrompt.value !== originalValues.value.maxBlogItemsInPrompt ||
       minContextLength.value !== originalValues.value.minContextLength ||
       maxAgeDays.value !== originalValues.value.maxAgeDays ||
       maxPrice.value !== originalValues.value.maxPrice ||
@@ -213,6 +234,8 @@ export function useSettingsView() {
       blogContentCharLimit.value = cfg.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT;
       postContentCharLimit.value = cfg.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT;
       maxQueueSize.value = cfg.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE;
+      maxRssItems.value = cfg.maxRssItems ?? DEFAULT_MAX_RSS_ITEMS;
+      maxBlogItemsInPrompt.value = cfg.maxBlogItemsInPrompt ?? DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT;
 
       // Load model filter preferences
       const filterPrefs = cfg.modelFilterPreferences ?? {};
@@ -241,6 +264,8 @@ export function useSettingsView() {
         blogContentCharLimit: cfg.blogContentCharLimit ?? DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
         postContentCharLimit: cfg.postContentCharLimit ?? DEFAULT_POST_CONTENT_CHAR_LIMIT,
         maxQueueSize: cfg.maxQueueSize ?? DEFAULT_MAX_QUEUE_SIZE,
+        maxRssItems: cfg.maxRssItems ?? DEFAULT_MAX_RSS_ITEMS,
+        maxBlogItemsInPrompt: cfg.maxBlogItemsInPrompt ?? DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT,
         minContextLength: minContextLength.value,
         maxAgeDays: maxAgeDays.value,
         maxPrice: maxPrice.value,
@@ -280,6 +305,7 @@ export function useSettingsView() {
 
   /**
    * Test RSS feed connection
+   * Requests host permission if needed (must be called from user gesture context)
    */
   async function testFeedConnection() {
     if (!rssFeedUrl.value) return;
@@ -291,6 +317,27 @@ export function useSettingsView() {
     feedItemCount.value = null;
 
     try {
+      // First check URL format locally
+      const formatResult = validateRssUrlFormat(rssFeedUrl.value);
+      if (!formatResult.valid) {
+        feedError.value = formatResult.error ?? 'Invalid URL format';
+        return;
+      }
+
+      // Request permission for this URL's origin (this is a user gesture context)
+      const origin = getOriginPattern(rssFeedUrl.value.trim());
+      const hasPermission = await chrome.permissions.contains({ origins: [origin] });
+
+      if (!hasPermission) {
+        // Request permission - this will show Chrome's permission prompt
+        const granted = await chrome.permissions.request({ origins: [origin] });
+        if (!granted) {
+          feedError.value = 'Permission denied: Cannot access RSS feed URL. Please grant permission to fetch the feed.';
+          return;
+        }
+      }
+
+      // Now validate the feed
       const result = await validateRssFeed(rssFeedUrl.value);
       if (result.valid) {
         feedValid.value = true;
@@ -331,6 +378,8 @@ export function useSettingsView() {
         postContentCharLimit: postContentCharLimit.value,
         maxQueueSize: maxQueueSize.value,
         maxMatchedPosts: maxMatchedPosts.value,
+        maxRssItems: maxRssItems.value,
+        maxBlogItemsInPrompt: maxBlogItemsInPrompt.value,
         modelFilterPreferences: {
           minContextLength: minContextLength.value,
           maxAgeDays: maxAgeDays.value,
@@ -375,6 +424,8 @@ export function useSettingsView() {
         blogContentCharLimit: blogContentCharLimit.value,
         postContentCharLimit: postContentCharLimit.value,
         maxQueueSize: maxQueueSize.value,
+        maxRssItems: maxRssItems.value,
+        maxBlogItemsInPrompt: maxBlogItemsInPrompt.value,
         minContextLength: minContextLength.value,
         maxAgeDays: maxAgeDays.value,
         maxPrice: maxPrice.value,
@@ -480,6 +531,29 @@ export function useSettingsView() {
     }
   }
 
+  /**
+   * Reset extension to initial state
+   * Clears all settings and returns to setup wizard
+   */
+  async function resetExtension(): Promise<boolean> {
+    const confirmed = window.confirm(
+      'Are you sure you want to reset? This will clear your API key, RSS feed URL, and all cached data.'
+    );
+    if (!confirmed) return false;
+
+    isResetting.value = true;
+    try {
+      await resetAllConfig();
+      openSetup();
+      return true;
+    } catch (error) {
+      saveError.value = error instanceof Error ? error.message : 'Failed to reset extension';
+      return false;
+    } finally {
+      isResetting.value = false;
+    }
+  }
+
   // Example comments management
   async function addExample() {
     if (!newExampleComment.value.trim()) return;
@@ -539,6 +613,8 @@ export function useSettingsView() {
     blogContentCharLimit,
     postContentCharLimit,
     maxQueueSize,
+    maxRssItems,
+    maxBlogItemsInPrompt,
 
     // Model filter state
     minContextLength,
@@ -554,6 +630,7 @@ export function useSettingsView() {
     isTestingApiKey,
     isTestingFeed,
     isClearingCache,
+    isResetting,
     cacheCleared,
     hasUnsavedChanges,
     showUnsavedWarning,
@@ -580,6 +657,8 @@ export function useSettingsView() {
     contextLengthOptions: CONTEXT_LENGTH_OPTIONS,
     modelAgeOptions: MODEL_AGE_OPTIONS,
     maxPriceOptions: MAX_PRICE_OPTIONS,
+    maxRssItemsOptions: MAX_RSS_ITEMS_OPTIONS,
+    maxBlogItemsInPromptOptions: MAX_BLOG_ITEMS_IN_PROMPT_OPTIONS,
     availableVendors,
 
     // Actions
@@ -592,6 +671,7 @@ export function useSettingsView() {
     confirmDiscard,
     cancelDiscard,
     clearCache,
+    resetExtension,
     addExample,
     removeExample,
     updateExample,

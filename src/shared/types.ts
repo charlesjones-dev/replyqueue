@@ -5,6 +5,11 @@
 export type AppView = 'setup' | 'main' | 'settings';
 
 /**
+ * Theme preference for the extension UI
+ */
+export type ThemePreference = 'light' | 'dark' | 'system';
+
+/**
  * Matching preferences for keyword-based post filtering
  */
 export interface MatchingPreferences {
@@ -34,8 +39,14 @@ export interface ExtensionConfig {
   maxQueueSize?: number;
   /** Maximum matched posts to keep after AI analysis */
   maxMatchedPosts?: number;
+  /** Maximum items to fetch from RSS feed */
+  maxRssItems?: number;
+  /** Maximum blog items to include in AI prompts for matching and suggestions */
+  maxBlogItemsInPrompt?: number;
   /** Model filter preferences for AI model selection */
   modelFilterPreferences?: ModelFilterOptions;
+  /** Theme preference for the extension UI */
+  themePreference?: ThemePreference;
 }
 
 export interface Post {

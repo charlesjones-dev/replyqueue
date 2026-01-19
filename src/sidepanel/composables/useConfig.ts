@@ -1,6 +1,6 @@
 import { ref, readonly } from 'vue';
 import type { ExtensionConfig } from '@shared/types';
-import { getConfig, saveConfig, updateConfig } from '@shared/storage';
+import { getConfig, saveConfig, updateConfig, resetConfig } from '@shared/storage';
 import { DEFAULT_CONFIG } from '@shared/constants';
 
 const config = ref<ExtensionConfig>({ ...DEFAULT_CONFIG });
@@ -158,6 +158,24 @@ export function useConfig() {
     await update({ isSetupComplete: true });
   }
 
+  /**
+   * Reset extension to initial state
+   * Clears API key, resets config to defaults, and clears all caches
+   */
+  async function resetAllConfig(): Promise<void> {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await resetConfig();
+      config.value = { ...DEFAULT_CONFIG };
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : 'Failed to reset config';
+      throw e;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return {
     config: readonly(config),
     isLoading: readonly(isLoading),
@@ -171,5 +189,6 @@ export function useConfig() {
     markSetupComplete,
     checkRssFeedPermission,
     requestRssFeedPermission,
+    resetAllConfig,
   };
 }

@@ -49,22 +49,32 @@ Each adapter implements: `extractPost()`, `getPostUrl()`, `scrollToPost()`, `isF
 `src/shared/messages.ts` defines typed messages for cross-context communication:
 
 - Content → Background: `POSTS_EXTRACTED`, `CONTENT_SCRIPT_READY`
-- Side Panel ↔ Background: `FETCH_RSS`, `AI_MATCH_POSTS`, `GENERATE_SUGGESTIONS`
+- Side Panel ↔ Background: `FETCH_RSS`, `AI_MATCH_POSTS`, `GENERATE_SUGGESTIONS`, `RESET_EXTENSION`
 - Background → Content: `SCROLL_TO_POST`, `EXTRACT_POSTS`
 
 ### Vue 3 Composables
 
 `src/sidepanel/composables/` extracts business logic into reusable composables:
 
+- `useAppState.ts` - Global app state (loading, errors)
+- `useClipboard.ts` - Copy-to-clipboard functionality
 - `useConfig.ts` - Extension configuration persistence
+- `useCreditsModal.ts` - Insufficient credits modal state
+- `useModels.ts` - OpenRouter model selection and filtering
+- `useNetworkStatus.ts` - Online/offline detection
 - `usePosts.ts` - Matched posts state with filtering
-- `useModels.ts` - OpenRouter model selection
+- `useSettingsView.ts` - Settings page state management
 - `useSetup.ts` - Onboarding flow logic
+- `useTabStatus.ts` - Content script connection status
+- `useTheme.ts` - Dark/light/system theme management
+- `useToast.ts` - Toast notification system
 
 ### Storage Strategy
 
-- **chrome.storage.sync** - Small config synced across devices (config, cachedModels)
-- **chrome.storage.local** - Larger local data (extractedPosts, matchedPostsWithScore, cachedRssFeed)
+- **chrome.storage.sync** - Small config synced across devices (config, cachedModels, exampleComments if <8KB)
+- **chrome.storage.local** - Larger local data (extractedPosts, matchedPostsWithScore, cachedRssFeed, aiMatchCache, evaluatedPostIds)
+- **API keys** - Always stored in local storage only (never synced for security)
+- **Fallback** - If sync storage fails, automatically falls back to local storage
 
 ## Testing
 
@@ -117,10 +127,12 @@ import { shared } from '@shared/types'   // → src/shared/types
 
 ## Workflow
 
+**IMPORTANT:** After every feature implementation or bug fix, you MUST run `pnpm build`. Chrome loads the extension from the `dist/` folder, so changes are not reflected until a build is run. The user will be testing the extension manually after each change.
+
 After implementing any plan, always run preflight checks:
 
 ```bash
-pnpm build        # Type check + build
+pnpm build        # Type check + build (REQUIRED after every change)
 pnpm lint:fix     # Auto-fix lint issues
 pnpm format       # Auto-fix formatting
 pnpm test         # Run tests
@@ -128,6 +140,24 @@ pnpm audit:check  # Check for vulnerable dependencies
 ```
 
 Fix any errors before considering the implementation complete.
+
+### Changelog and Versioning
+
+After preflight checks pass, use the `AskUserQuestion` tool to ask how to handle versioning:
+
+- **Current version** - Add the feature/fix to the existing version section in `CHANGELOG.md`
+- **New version** - Increment version in `manifest.json` and `package.json`, then add a new section in `CHANGELOG.md`
+- **Skip** - Do nothing.
+
+When incrementing versions:
+- Patch (x.x.X): Bug fixes, minor improvements
+- Minor (x.X.0): New features, non-breaking changes
+- Major (X.0.0): Breaking changes
+
+Files to update for new versions:
+- `manifest.json` - Update `version` field
+- `package.json` - Update `version` field
+- `CHANGELOG.md` - Add new version section with date, update comparison links at bottom
 
 ## Security
 

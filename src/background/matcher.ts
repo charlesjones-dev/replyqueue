@@ -20,6 +20,7 @@ import {
   DEFAULT_MAX_MATCHED_POSTS,
   DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
   DEFAULT_POST_CONTENT_CHAR_LIMIT,
+  DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT,
   MAX_STYLE_EXAMPLES_IN_PROMPT,
   REPLY_SUGGESTIONS_COUNT,
   AI_MATCH_BATCH_SIZE,
@@ -449,9 +450,10 @@ function buildMatchingPrompt(
   exampleComments: string[],
   communicationPreferences: string = '',
   blogContentCharLimit: number = DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
-  postContentCharLimit: number = DEFAULT_POST_CONTENT_CHAR_LIMIT
+  postContentCharLimit: number = DEFAULT_POST_CONTENT_CHAR_LIMIT,
+  maxBlogItemsInPrompt: number = DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT
 ): string {
-  const blogSummary = buildBlogSummary(feedItems, 10, blogContentCharLimit);
+  const blogSummary = buildBlogSummary(feedItems, maxBlogItemsInPrompt, blogContentCharLimit);
 
   const postsJson = posts.map((post) => ({
     id: post.id,
@@ -568,7 +570,8 @@ export async function aiMatchPosts(
   maxMatchedPosts: number = DEFAULT_MAX_MATCHED_POSTS,
   communicationPreferences: string = '',
   blogContentCharLimit: number = DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
-  postContentCharLimit: number = DEFAULT_POST_CONTENT_CHAR_LIMIT
+  postContentCharLimit: number = DEFAULT_POST_CONTENT_CHAR_LIMIT,
+  maxBlogItemsInPrompt: number = DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT
 ): Promise<MatchResult> {
   const startTime = Date.now();
 
@@ -613,7 +616,8 @@ export async function aiMatchPosts(
         exampleComments,
         communicationPreferences,
         blogContentCharLimit,
-        postContentCharLimit
+        postContentCharLimit,
+        maxBlogItemsInPrompt
       );
 
       try {
@@ -721,12 +725,12 @@ export async function generateReplySuggestions(
   model: string,
   exampleComments: string[] = [],
   communicationPreferences: string = '',
-  blogContentCharLimit: number = DEFAULT_BLOG_CONTENT_CHAR_LIMIT
+  blogContentCharLimit: number = DEFAULT_BLOG_CONTENT_CHAR_LIMIT,
+  maxBlogItemsInPrompt: number = DEFAULT_MAX_BLOG_ITEMS_IN_PROMPT
 ): Promise<ReplySuggestion[]> {
   console.log(`${LOG_PREFIX} Generating suggestions for post ${post.id}`);
 
-  // Use fewer items for single-post regeneration to save tokens
-  const blogSummary = buildBlogSummary(feed.items, 5, blogContentCharLimit);
+  const blogSummary = buildBlogSummary(feed.items, maxBlogItemsInPrompt, blogContentCharLimit);
 
   const styleExamples = exampleComments.slice(0, MAX_STYLE_EXAMPLES_IN_PROMPT);
   const styleSection =

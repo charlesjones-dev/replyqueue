@@ -2,13 +2,13 @@
   "manifest_version": 3,
   "name": "ReplyQueue",
   "description": "Side panel for finding social media posts relevant to your blog content and get AI-powered reply suggestions.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["storage", "sidePanel", "activeTab"],
+  "permissions": ["storage", "sidePanel", "activeTab", "scripting"],
   "host_permissions": ["https://www.linkedin.com/*", "https://linkedin.com/*", "https://openrouter.ai/*"],
   "optional_host_permissions": ["<all_urls>"],
   "content_security_policy": {

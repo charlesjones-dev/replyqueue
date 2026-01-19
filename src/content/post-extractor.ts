@@ -37,6 +37,13 @@ export class PostExtractor {
   private scrollCleanup: (() => void) | null = null;
   private isRunning = false;
 
+  /**
+   * Check if the extractor is currently running
+   */
+  get running(): boolean {
+    return this.isRunning;
+  }
+
   constructor(options: PostExtractorOptions) {
     this.adapter = options.adapter;
     this.onPostsExtracted = options.onPostsExtracted;

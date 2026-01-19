@@ -15,36 +15,36 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'skip', postId: string, platform: string): void;
+  (e: 'unskip', postId: string, platform: string): void;
   (e: 'replied', postId: string, platform: string): void;
   (e: 'open', postId: string, platform: string): void;
   (e: 'regenerate', postId: string, platform: string): void;
-  (e: 'jumpToPost', postId: string, platform: string): void;
 }>();
 
 // State for expanded suggestions and content
+const isSuggestionsExpanded = ref(false);
 const showAllSuggestions = ref(false);
 const isRegenerating = ref(false);
-const isJumping = ref(false);
 const isContentExpanded = ref(false);
 
 const scorePercentage = computed(() => Math.round(props.match.score * 100));
 
 const scoreColor = computed(() => {
-  if (props.match.score >= 0.7) return 'text-green-600 bg-green-100';
-  if (props.match.score >= 0.4) return 'text-yellow-600 bg-yellow-100';
-  return 'text-gray-600 bg-gray-100';
+  if (props.match.score >= 0.7) return 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/50';
+  if (props.match.score >= 0.4) return 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-900/50';
+  return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-700';
 });
 
 const statusBadge = computed(() => {
   switch (props.match.status) {
     case 'pending':
-      return { text: 'Pending', class: 'bg-gray-100 text-gray-600' };
+      return { text: 'Matched', class: 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400' };
     case 'replied':
-      return { text: 'Replied', class: 'bg-green-100 text-green-600' };
+      return { text: 'Replied', class: 'bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400' };
     case 'skipped':
-      return { text: 'Skipped', class: 'bg-gray-100 text-gray-400' };
+      return { text: 'Skipped', class: 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500' };
     default:
-      return { text: 'Unknown', class: 'bg-gray-100 text-gray-600' };
+      return { text: 'Unknown', class: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400' };
   }
 });
 
@@ -69,32 +69,32 @@ const heatBadgeConfig = computed(() => {
   const configs: Record<PostTone, { label: string; class: string; icon: string }> = {
     positive: {
       label: 'Positive',
-      class: 'bg-green-100 text-green-700',
+      class: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400',
       icon: '✓',
     },
     educational: {
       label: 'Educational',
-      class: 'bg-blue-100 text-blue-700',
+      class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400',
       icon: '📚',
     },
     question: {
       label: 'Question',
-      class: 'bg-purple-100 text-purple-700',
+      class: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-400',
       icon: '?',
     },
     negative: {
       label: 'Negative',
-      class: 'bg-red-100 text-red-700',
+      class: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400',
       icon: '⚠',
     },
     promotional: {
       label: 'Promo',
-      class: 'bg-orange-100 text-orange-700',
+      class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400',
       icon: '📢',
     },
     neutral: {
       label: 'Neutral',
-      class: 'bg-gray-100 text-gray-600',
+      class: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
       icon: '•',
     },
   };
@@ -120,21 +120,16 @@ function handleSkip() {
   emit('skip', props.match.post.id, props.match.post.platform);
 }
 
+function handleUnskip() {
+  emit('unskip', props.match.post.id, props.match.post.platform);
+}
+
 function handleReplied() {
   emit('replied', props.match.post.id, props.match.post.platform);
 }
 
 function handleOpen() {
   emit('open', props.match.post.id, props.match.post.platform);
-}
-
-function handleJumpToPost() {
-  isJumping.value = true;
-  emit('jumpToPost', props.match.post.id, props.match.post.platform);
-  // Reset after a short delay
-  setTimeout(() => {
-    isJumping.value = false;
-  }, 1500);
 }
 
 function handleRegenerate() {
@@ -163,7 +158,7 @@ const hiddenSuggestionsCount = computed(() => {
 
 <template>
   <div
-    class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+    class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
     :class="{ 'opacity-60': match.status === 'skipped' }"
   >
     <!-- Header -->
@@ -175,7 +170,7 @@ const hiddenSuggestionsCount = computed(() => {
         </span>
         <span
           v-if="match.skippedBeforeAnalysis"
-          class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500"
+          class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400"
         >
           Pre-Skipped
         </span>
@@ -204,14 +199,16 @@ const hiddenSuggestionsCount = computed(() => {
 
     <!-- Author -->
     <div class="mb-2 flex items-center gap-2">
-      <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-gray-600">
+      <div
+        class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-sm font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+      >
         {{ match.post.authorName.charAt(0).toUpperCase() }}
       </div>
       <div class="min-w-0 flex-1">
-        <p class="truncate text-sm font-medium text-gray-900">
+        <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
           {{ match.post.authorName }}
         </p>
-        <p v-if="match.post.authorHeadline" class="truncate text-xs text-gray-500">
+        <p v-if="match.post.authorHeadline" class="truncate text-xs text-gray-500 dark:text-gray-400">
           {{ match.post.authorHeadline }}
         </p>
       </div>
@@ -219,11 +216,11 @@ const hiddenSuggestionsCount = computed(() => {
 
     <!-- Content preview -->
     <div class="mb-3">
-      <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ displayContent }}</p>
+      <p class="text-sm text-gray-700 whitespace-pre-wrap dark:text-gray-300">{{ displayContent }}</p>
       <button
         v-if="isTruncatable"
         type="button"
-        class="mt-1 text-xs text-blue-600 hover:text-blue-700 hover:underline"
+        class="mt-1 text-xs text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
         @click="isContentExpanded = !isContentExpanded"
       >
         {{ isContentExpanded ? 'Show less' : 'View all' }}
@@ -231,17 +228,33 @@ const hiddenSuggestionsCount = computed(() => {
     </div>
 
     <!-- Match reason -->
-    <p class="mb-3 text-xs text-gray-500 italic">
+    <p class="mb-3 text-xs text-gray-500 italic dark:text-gray-400">
       {{ match.matchReason }}
     </p>
 
     <!-- Reply Suggestions Section -->
     <div v-if="hasSuggestions" class="mb-3">
       <div class="mb-2 flex items-center justify-between">
-        <span class="text-xs font-medium text-gray-700">Reply Suggestions</span>
         <button
           type="button"
-          class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700"
+          class="flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+          @click="isSuggestionsExpanded = !isSuggestionsExpanded"
+        >
+          <svg
+            class="h-3.5 w-3.5 transition-transform"
+            :class="{ 'rotate-180': isSuggestionsExpanded }"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+          Reply Suggestions
+        </button>
+        <button
+          v-if="isSuggestionsExpanded"
+          type="button"
+          class="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
           :disabled="isRegenerating"
           @click="handleRegenerate"
         >
@@ -263,33 +276,35 @@ const hiddenSuggestionsCount = computed(() => {
         </button>
       </div>
 
-      <div class="space-y-2">
-        <ReplySuggestionComponent
-          v-for="(suggestion, index) in displayedSuggestions"
-          :key="suggestion.id"
-          :suggestion="suggestion"
-          :is-first="index === 0"
-        />
-      </div>
+      <template v-if="isSuggestionsExpanded">
+        <div class="space-y-2">
+          <ReplySuggestionComponent
+            v-for="(suggestion, index) in displayedSuggestions"
+            :key="suggestion.id"
+            :suggestion="suggestion"
+            :is-first="index === 0"
+          />
+        </div>
 
-      <!-- Show more/less toggle -->
-      <button
-        v-if="hiddenSuggestionsCount > 0"
-        type="button"
-        class="mt-2 text-xs text-blue-600 hover:text-blue-700"
-        @click="showAllSuggestions = !showAllSuggestions"
-      >
-        {{
-          showAllSuggestions
-            ? 'Show less'
-            : `Show ${hiddenSuggestionsCount} more suggestion${hiddenSuggestionsCount > 1 ? 's' : ''}`
-        }}
-      </button>
+        <!-- Show more/less toggle -->
+        <button
+          v-if="hiddenSuggestionsCount > 0"
+          type="button"
+          class="mt-2 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          @click="showAllSuggestions = !showAllSuggestions"
+        >
+          {{
+            showAllSuggestions
+              ? 'Show less'
+              : `Show ${hiddenSuggestionsCount} more suggestion${hiddenSuggestionsCount > 1 ? 's' : ''}`
+          }}
+        </button>
+      </template>
     </div>
 
     <!-- Footer -->
-    <div class="flex items-center justify-between border-t border-gray-100 pt-3">
-      <span class="text-xs text-gray-400">
+    <div class="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-700">
+      <span class="text-xs text-gray-400 dark:text-gray-500">
         {{ relativeTime }}
       </span>
 
@@ -297,35 +312,22 @@ const hiddenSuggestionsCount = computed(() => {
         <button
           v-if="match.status === 'pending'"
           type="button"
-          class="rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
+          class="rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
           @click="handleSkip"
         >
           Skip
         </button>
         <button
+          v-if="match.status === 'skipped'"
           type="button"
-          class="flex items-center gap-1 rounded px-2 py-1 text-xs text-gray-500 hover:bg-gray-100"
-          :disabled="isJumping"
-          title="Scroll to post in feed"
-          @click="handleJumpToPost"
+          class="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
+          @click="handleUnskip"
         >
-          <svg v-if="isJumping" class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          <svg v-else class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
-            />
-          </svg>
-          <span>Jump</span>
+          Unskip
         </button>
         <button
           type="button"
-          class="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100"
+          class="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
           @click="handleOpen"
         >
           View
@@ -334,7 +336,7 @@ const hiddenSuggestionsCount = computed(() => {
         <button
           v-if="match.status === 'pending' && !hasSuggestions"
           type="button"
-          class="flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
+          class="flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
           :disabled="isRegenerating"
           @click="handleRegenerate"
         >
@@ -356,7 +358,7 @@ const hiddenSuggestionsCount = computed(() => {
         <button
           v-if="match.status === 'pending' && hasSuggestions"
           type="button"
-          class="flex items-center gap-1 rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
+          class="flex items-center gap-1 rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600"
           @click="handleReplied"
         >
           <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

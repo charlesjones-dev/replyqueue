@@ -252,19 +252,20 @@ export function usePosts() {
 
   /**
    * Trigger content script to re-scan the current feed
+   * Uses ENSURE_CONTENT_SCRIPT to inject the content script if needed
    */
   async function rescanFeed() {
     try {
-      // Get the active tab
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const activeTab = tabs[0];
+      // Send message to background to ensure content script is running
+      // This will inject the content script if needed (e.g., when side panel
+      // opens on an already-loaded LinkedIn page)
+      const response = await sendMessage({ type: 'ENSURE_CONTENT_SCRIPT' });
 
-      if (!activeTab?.id) {
-        throw new Error('No active tab found');
+      if (!response.success) {
+        // Not a LinkedIn page or other expected failure - silently ignore
+        console.log('Content script not needed:', response.error);
+        return;
       }
-
-      // Send message to content script to restart extraction
-      await chrome.tabs.sendMessage(activeTab.id, { type: 'START_EXTRACTION' });
 
       // Wait a bit for extraction to complete, then refresh
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -353,6 +354,9 @@ export function usePosts() {
   onMounted(() => {
     loadPosts();
     setupStorageListener();
+    // Trigger content script to scan for posts on current page
+    // This ensures posts are detected when opening side panel on already-loaded pages
+    rescanFeed();
   });
 
   // Clean up storage listener on unmount

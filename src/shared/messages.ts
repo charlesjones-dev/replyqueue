@@ -20,7 +20,7 @@ export type MessageType =
   // Background to content script messages
   | 'START_EXTRACTION'
   | 'STOP_EXTRACTION'
-  | 'SCROLL_TO_POST'
+  | 'ENSURE_CONTENT_SCRIPT'
   // AI/Model messages
   | 'FETCH_MODELS'
   | 'AI_MATCH_POSTS'
@@ -29,6 +29,7 @@ export type MessageType =
   | 'HEAT_CHECK_POSTS'
   // Queue management
   | 'SKIP_QUEUED_POST'
+  | 'UNSKIP_POST'
   // Permission messages
   | 'REQUEST_HOST_PERMISSION'
   | 'CHECK_HOST_PERMISSION';
@@ -126,11 +127,11 @@ export interface StopExtractionMessage extends BaseMessage {
 }
 
 /**
- * Command to scroll to a specific post
+ * Ensure content script is injected and extracting on the active tab
+ * Handles the case where side panel opens on an already-loaded page
  */
-export interface ScrollToPostMessage extends BaseMessage {
-  type: 'SCROLL_TO_POST';
-  postId: string;
+export interface EnsureContentScriptMessage extends BaseMessage {
+  type: 'ENSURE_CONTENT_SCRIPT';
 }
 
 // ============================================================
@@ -147,9 +148,12 @@ export interface FetchModelsMessage extends BaseMessage {
 
 /**
  * Request AI matching for posts
+ * If postIds provided, only match those specific posts
+ * If not provided, match all queued (non-evaluated) posts
  */
 export interface AIMatchPostsMessage extends BaseMessage {
   type: 'AI_MATCH_POSTS';
+  postIds?: string[];
 }
 
 /**
@@ -186,6 +190,15 @@ export interface HeatCheckPostsMessage extends BaseMessage {
  */
 export interface SkipQueuedPostMessage extends BaseMessage {
   type: 'SKIP_QUEUED_POST';
+  postId: string;
+  platform: string;
+}
+
+/**
+ * Unskip a post and move it back to queue
+ */
+export interface UnskipPostMessage extends BaseMessage {
+  type: 'UNSKIP_POST';
   postId: string;
   platform: string;
 }
@@ -227,13 +240,14 @@ export type ExtensionMessage =
   | GetExtractionStatusMessage
   | StartExtractionMessage
   | StopExtractionMessage
-  | ScrollToPostMessage
+  | EnsureContentScriptMessage
   | FetchModelsMessage
   | AIMatchPostsMessage
   | GenerateSuggestionsMessage
   | RegenerateSuggestionsMessage
   | HeatCheckPostsMessage
   | SkipQueuedPostMessage
+  | UnskipPostMessage
   | RequestHostPermissionMessage
   | CheckHostPermissionMessage;
 
@@ -309,11 +323,4 @@ export function isPostsExtractedMessage(message: ExtensionMessage): message is P
  */
 export function isContentScriptReadyMessage(message: ExtensionMessage): message is ContentScriptReadyMessage {
   return message.type === 'CONTENT_SCRIPT_READY';
-}
-
-/**
- * Type guard for ScrollToPostMessage
- */
-export function isScrollToPostMessage(message: ExtensionMessage): message is ScrollToPostMessage {
-  return message.type === 'SCROLL_TO_POST';
 }

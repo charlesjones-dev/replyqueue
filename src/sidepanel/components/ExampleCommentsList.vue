@@ -34,11 +34,11 @@ function handleUpdate(oldComment: string, newComment: string) {
 <template>
   <div class="space-y-4">
     <div class="flex items-center justify-between">
-      <label class="block text-sm font-medium text-gray-700"> Writing Style Examples </label>
-      <span class="text-xs text-gray-500"> {{ comments.length }}/{{ MAX_EXAMPLE_COMMENTS }} </span>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-200"> Writing Style Examples </label>
+      <span class="text-xs text-gray-500 dark:text-gray-400"> {{ comments.length }}/{{ MAX_EXAMPLE_COMMENTS }} </span>
     </div>
 
-    <p class="text-xs text-gray-500">
+    <p class="text-xs text-gray-500 dark:text-gray-400">
       Add example comments in your writing style. These will help the AI generate replies that match how you naturally
       write.
     </p>
@@ -48,13 +48,13 @@ function handleUpdate(oldComment: string, newComment: string) {
       <textarea
         v-model="newComment"
         rows="2"
-        class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
         placeholder="Type an example comment..."
         :disabled="comments.length >= MAX_EXAMPLE_COMMENTS"
       />
       <button
         type="button"
-        class="w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+        class="w-full rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
         :disabled="!newComment.trim() || comments.length >= MAX_EXAMPLE_COMMENTS"
         @click="handleAdd"
       >
@@ -70,7 +70,7 @@ function handleUpdate(oldComment: string, newComment: string) {
     <!-- Comments list -->
     <div
       v-if="comments.length > 0"
-      class="max-h-64 space-y-2 overflow-y-auto rounded-md border border-gray-200 bg-white p-2"
+      class="max-h-64 space-y-2 overflow-y-auto rounded-md border border-gray-200 bg-white p-2 dark:border-gray-600 dark:bg-gray-700"
     >
       <ExampleCommentItem
         v-for="(comment, index) in comments"
@@ -83,8 +83,13 @@ function handleUpdate(oldComment: string, newComment: string) {
     </div>
 
     <!-- Empty state -->
-    <div v-else class="rounded-md border border-dashed border-gray-300 p-4 text-center">
-      <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div v-else class="rounded-md border border-dashed border-gray-300 p-4 text-center dark:border-gray-600">
+      <svg
+        class="mx-auto h-8 w-8 text-gray-400 dark:text-gray-500"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
         <path
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -92,7 +97,9 @@ function handleUpdate(oldComment: string, newComment: string) {
           d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
         />
       </svg>
-      <p class="mt-2 text-sm text-gray-500">No examples yet. Add some comments to help train your writing style.</p>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        No examples yet. Add some comments to help train your writing style.
+      </p>
     </div>
   </div>
 </template>

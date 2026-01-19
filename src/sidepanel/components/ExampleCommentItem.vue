@@ -44,17 +44,20 @@ function handleDelete() {
 </script>
 
 <template>
-  <div class="rounded-md border border-gray-200 bg-gray-50 p-3" :class="{ 'bg-white': isEditing }">
+  <div
+    class="rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-600"
+    :class="{ 'bg-white dark:bg-gray-700': isEditing }"
+  >
     <!-- Display mode -->
     <div v-if="!isEditing" class="flex items-start justify-between gap-2">
       <div class="flex-1 min-w-0">
-        <span class="text-xs text-gray-400 mr-2">{{ index + 1 }}.</span>
-        <span class="text-sm text-gray-700">{{ truncatedComment }}</span>
+        <span class="text-xs text-gray-400 mr-2 dark:text-gray-500">{{ index + 1 }}.</span>
+        <span class="text-sm text-gray-700 dark:text-gray-200">{{ truncatedComment }}</span>
       </div>
       <div class="flex items-center gap-1 flex-shrink-0">
         <button
           type="button"
-          class="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+          class="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-500 dark:hover:text-gray-200"
           title="Edit"
           @click="startEdit"
         >
@@ -69,7 +72,7 @@ function handleDelete() {
         </button>
         <button
           type="button"
-          class="rounded p-1 text-gray-400 hover:bg-red-100 hover:text-red-600"
+          class="rounded p-1 text-gray-400 hover:bg-red-100 hover:text-red-600 dark:text-gray-500 dark:hover:bg-red-900/50 dark:hover:text-red-400"
           title="Delete"
           @click="handleDelete"
         >
@@ -90,16 +93,20 @@ function handleDelete() {
       <textarea
         v-model="editValue"
         rows="3"
-        class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+        class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-600 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400"
         placeholder="Enter example comment..."
       />
       <div class="flex justify-end gap-2">
-        <button type="button" class="rounded-md px-3 py-1 text-sm text-gray-600 hover:bg-gray-100" @click="cancelEdit">
+        <button
+          type="button"
+          class="rounded-md px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600"
+          @click="cancelEdit"
+        >
           Cancel
         </button>
         <button
           type="button"
-          class="rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
+          class="rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
           :disabled="!editValue.trim()"
           @click="saveEdit"
         >

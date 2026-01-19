@@ -4,8 +4,17 @@
 
 /* Custom styles for the extension */
 body {
-  @apply text-gray-900 antialiased;
+  @apply text-gray-900 antialiased dark:bg-gray-900 dark:text-gray-100;
   min-width: 320px;
+}
+
+/* Ensure smooth color transitions when switching themes */
+html {
+  transition: color-scheme 0.2s ease;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 /* Smooth transitions for view changes */

@@ -15,7 +15,8 @@ Content creators spend hours scrolling social feeds hoping to find relevant disc
 - **Passive Discovery** - Extracts posts as you scroll, no extra workflow
 - **Smart Matching** - Keyword and AI-powered relevance scoring against your content
 - **Reply Suggestions** - Generates responses that match your writing style
-- **Jump to Post** - One click to navigate directly to matched posts
+- **View Post** - One click to open matched posts in a new tab
+- **Dark Mode** - System, light, or dark theme with one-click toggle
 - **Privacy-First** - No analytics, no tracking, your data stays local
 - **Extensible** - Platform adapter pattern makes adding new networks straightforward
 
@@ -193,6 +194,8 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
 | Relevance Threshold | 30% | 10-90% | Minimum score for a post to be considered a match |
 | Max Posts to Show | 20 | 10, 20, 30, 50, 100 | Maximum number of matched posts to display |
 | RSS Cache Duration | 60 min | 15, 30, 60, 120, 240 | How long to cache RSS feed before refreshing |
+| Max RSS Items | 25 | 10, 25, 50, 100 | Maximum items to fetch from RSS feed |
+| Max Blog Items in AI Prompts | 25 | 10, 25, 50, All | Blog items included when AI evaluates posts |
 | Blog Content Sent to AI | 2,500 chars | 1K, 2.5K, 5K, 10K, No limit | Amount of blog content included when matching |
 | Social Post Content Sent to AI | 1,000 chars | 500, 1K, 2K, 3K, No limit | Amount of post content included when evaluating |
 

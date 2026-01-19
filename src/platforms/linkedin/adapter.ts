@@ -79,30 +79,6 @@ export class LinkedInAdapter implements PlatformAdapter {
   }
 
   /**
-   * Scroll the page to a specific post
-   * @returns true if post was found and scrolled to, false otherwise
-   */
-  scrollToPost(postId: string): boolean {
-    const postElement = document.querySelector(`[data-urn*="${postId}"], [data-urn*="activity:${postId}"]`);
-    if (postElement) {
-      postElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Highlight the post briefly
-      const originalOutline = (postElement as HTMLElement).style.outline;
-      const originalTransition = (postElement as HTMLElement).style.transition;
-      (postElement as HTMLElement).style.transition = 'outline 0.3s ease';
-      (postElement as HTMLElement).style.outline = '2px solid #0a66c2';
-      setTimeout(() => {
-        (postElement as HTMLElement).style.outline = originalOutline;
-        (postElement as HTMLElement).style.transition = originalTransition;
-      }, 2000);
-      return true;
-    } else {
-      console.warn(`${LOG_PREFIX} Could not find post with ID: ${postId}`);
-      return false;
-    }
-  }
-
-  /**
    * Extract a post from a DOM element
    */
   extractPost(element: Element): ExtractedPost | null {
@@ -267,8 +243,12 @@ export class LinkedInAdapter implements PlatformAdapter {
 
     let text = clone.textContent || '';
 
-    // Clean up whitespace
-    text = text.replace(/\s+/g, ' ').trim();
+    // Clean up whitespace while preserving newlines
+    text = text
+      .replace(/[^\S\n]+/g, ' ') // Collapse horizontal whitespace only
+      .replace(/\n\s*\n/g, '\n\n') // Normalize paragraph breaks
+      .replace(/^\s+|\s+$/gm, '') // Trim each line
+      .trim();
 
     // Remove common LinkedIn UI text
     text = text.replace(/\s*(see more|see less|…more)\s*/gi, '').trim();

@@ -7,12 +7,13 @@ import { useToast } from '../composables/useToast';
 import { useNetworkStatus } from '../composables/useNetworkStatus';
 import { useCreditsModal } from '../composables/useCreditsModal';
 import { useTabStatus } from '../composables/useTabStatus';
-import { sendMessage, sendTabMessage, type MessageResponse } from '@shared/messages';
+import { sendMessage, type MessageResponse } from '@shared/messages';
 import PostCard from '../components/PostCard.vue';
 import QueuedPostCard from '../components/QueuedPostCard.vue';
 import PostCardSkeleton from '../components/PostCardSkeleton.vue';
 import Toast from '../components/Toast.vue';
 import TabStatusBadge from '../components/TabStatusBadge.vue';
+import ThemeToggle from '../components/ThemeToggle.vue';
 
 const { openSettings, openSetup } = useAppState();
 const { config, requestRssFeedPermission } = useConfig();
@@ -55,6 +56,35 @@ const extensionVersion = computed(() => {
 const isAIMatching = ref(false);
 const aiMatchError = ref<string | null>(null);
 
+// Post selection state for selective AI matching
+const selectedPostIds = ref<Set<string>>(new Set());
+const matchingPostId = ref<string | null>(null);
+
+// Computed: check if any posts are selected
+const hasSelectedPosts = computed(() => selectedPostIds.value.size > 0);
+
+// Get the post key for selection tracking
+function getPostKey(postId: string, platform: string): string {
+  return `${platform}:${postId}`;
+}
+
+// Check if a post is selected
+function isPostSelected(postId: string, platform: string): boolean {
+  return selectedPostIds.value.has(getPostKey(postId, platform));
+}
+
+// Toggle post selection
+function handleSelectPost(postId: string, platform: string) {
+  const key = getPostKey(postId, platform);
+  const newSet = new Set(selectedPostIds.value);
+  if (newSet.has(key)) {
+    newSet.delete(key);
+  } else {
+    newSet.add(key);
+  }
+  selectedPostIds.value = newSet;
+}
+
 // Format error message for user display
 function formatErrorMessage(error: string): string {
   // Handle common error cases with user-friendly messages
@@ -77,7 +107,8 @@ function formatErrorMessage(error: string): string {
 }
 
 // Run AI matching (includes heat check)
-async function runAIMatching() {
+// If postIds provided, only match those posts. Otherwise match all queued or selected posts.
+async function runAIMatching(postIds?: string[]) {
   if (!isOnline.value) {
     toast.warning('You are offline. Please check your internet connection.');
     return;
@@ -92,10 +123,14 @@ async function runAIMatching() {
   isAIMatching.value = true;
   aiMatchError.value = null;
 
+  // Determine which posts to match
+  const idsToMatch = postIds ?? (hasSelectedPosts.value ? Array.from(selectedPostIds.value) : undefined);
+
   try {
     // Step 1: Run AI matching
-    const matchResponse = (await sendMessage({ type: 'AI_MATCH_POSTS' })) as MessageResponse;
-    console.log('[MainView] AI_MATCH_POSTS response:', matchResponse);
+    console.log('[MainView] Starting AI_MATCH_POSTS...');
+    const matchResponse = (await sendMessage({ type: 'AI_MATCH_POSTS', postIds: idsToMatch })) as MessageResponse;
+    console.log('[MainView] AI_MATCH_POSTS complete:', matchResponse.success);
 
     if (!matchResponse.success) {
       console.log('[MainView] Response error:', matchResponse.error);
@@ -108,68 +143,75 @@ async function runAIMatching() {
         // Request permission - we're in a user gesture context from the button click
         const granted = await requestRssFeedPermission();
 
-        if (granted) {
-          toast.success('Permission granted! Retrying...');
-          // Retry the AI matching now that we have permission
-          const retryResponse = (await sendMessage({ type: 'AI_MATCH_POSTS' })) as MessageResponse;
-          if (retryResponse.success) {
-            // Continue with heat check
-            const heatCheckResponse = (await sendMessage({ type: 'HEAT_CHECK_POSTS' })) as MessageResponse;
-            if (!heatCheckResponse.success && heatCheckResponse.error !== 'INSUFFICIENT_CREDITS') {
-              console.warn('Heat check failed:', heatCheckResponse.error);
-            }
-            await loadPosts();
-            setFilter('matched');
-            toast.success('AI matching complete');
-            isAIMatching.value = false;
-            return;
-          }
-          throw new Error(retryResponse.error ?? 'AI matching failed after permission grant');
-        } else {
+        if (!granted) {
           aiMatchError.value = 'Permission denied. Please grant access to your RSS feed URL in settings.';
-          isAIMatching.value = false;
-          return;
+          return; // Exit without switching tabs - finally block will reset isAIMatching
         }
-      }
 
-      // Check for insufficient credits error
-      if (matchResponse.error === 'INSUFFICIENT_CREDITS') {
+        toast.success('Permission granted! Retrying...');
+        // Retry the AI matching now that we have permission
+        const retryResponse = (await sendMessage({ type: 'AI_MATCH_POSTS', postIds: idsToMatch })) as MessageResponse;
+        if (!retryResponse.success) {
+          throw new Error(retryResponse.error ?? 'AI matching failed after permission grant');
+        }
+        // Continue to heat check below (don't return early)
+      } else if (matchResponse.error === 'INSUFFICIENT_CREDITS') {
+        // Check for insufficient credits error
         console.log('[MainView] Showing credits modal');
         creditsModal.show(matchResponse.errorData?.requestedTokens, matchResponse.errorData?.availableTokens);
-        isAIMatching.value = false;
-        return;
+        return; // Exit without switching tabs - finally block will reset isAIMatching
+      } else {
+        throw new Error(matchResponse.error ?? 'AI matching failed');
       }
-      throw new Error(matchResponse.error ?? 'AI matching failed');
     }
 
-    // Step 2: Run heat check on matched posts
+    // Step 2: Run heat check on matched posts - ALWAYS wait for this before switching tabs
+    console.log('[MainView] Starting HEAT_CHECK_POSTS...');
     const heatCheckResponse = (await sendMessage({ type: 'HEAT_CHECK_POSTS' })) as MessageResponse;
+    console.log('[MainView] HEAT_CHECK_POSTS complete:', heatCheckResponse.success);
 
+    // Track if heat check had issues (but don't fail the whole operation)
+    let heatCheckWarning = false;
     if (!heatCheckResponse.success) {
-      // Check for insufficient credits error in heat check
       if (heatCheckResponse.error === 'INSUFFICIENT_CREDITS') {
         creditsModal.show(heatCheckResponse.errorData?.requestedTokens, heatCheckResponse.errorData?.availableTokens);
-        // Still load posts since AI matching succeeded
-        await loadPosts();
-        setFilter('matched');
-        toast.warning('AI matching complete, but heat check requires more credits');
-        isAIMatching.value = false;
-        return;
+        heatCheckWarning = true;
+      } else {
+        console.warn('Heat check failed:', heatCheckResponse.error);
       }
-      console.warn('Heat check failed:', heatCheckResponse.error);
-      // Don't fail the whole operation if heat check fails
+      // Still proceed to show results - AI matching succeeded
     }
 
-    // Reload posts to show matches with heat check results
+    // Step 3: ONLY NOW switch to matched tab (after BOTH API calls complete)
+    console.log('[MainView] Both calls complete, switching to matched tab...');
     await loadPosts();
     setFilter('matched');
-    toast.success('AI matching complete');
+    selectedPostIds.value = new Set(); // Clear selection after matching
+
+    if (heatCheckWarning) {
+      toast.warning('AI matching complete, but heat check requires more credits');
+    } else {
+      toast.success('AI matching complete');
+    }
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : 'AI matching failed';
     aiMatchError.value = formatErrorMessage(errorMsg);
     toast.error('AI matching failed');
   } finally {
+    console.log('[MainView] Setting isAIMatching to false');
     isAIMatching.value = false;
+  }
+}
+
+// Handle AI matching for a single post
+async function handleAIMatchSingle(postId: string, platform: string) {
+  const key = getPostKey(postId, platform);
+  matchingPostId.value = key;
+
+  try {
+    await runAIMatching([key]);
+  } finally {
+    matchingPostId.value = null;
   }
 }
 
@@ -206,6 +248,15 @@ const filters: { value: PostFilter; label: string }[] = [
   { value: 'replied', label: 'Replied' },
   { value: 'skipped', label: 'Skipped' },
 ];
+
+// Only show Replied/Skipped tabs when they have posts
+const visibleFilters = computed(() =>
+  filters.filter((f) => {
+    if (f.value === 'replied') return repliedCount.value > 0;
+    if (f.value === 'skipped') return skippedCount.value > 0;
+    return true;
+  })
+);
 
 function getFilterCount(filter: PostFilter): number {
   switch (filter) {
@@ -271,77 +322,31 @@ async function handleSkipQueued(postId: string, platform: string) {
   }
 }
 
-// Handle jump to queued post - sends message to content script to scroll to the post
-async function handleJumpToQueuedPost(postId: string, _platform: string) {
+// Handle unskip post - sends message to background to move post back to queue
+async function handleUnskip(postId: string, platform: string) {
   try {
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    const activeTab = tabs[0];
-
-    if (!activeTab?.id) {
-      toast.error('No active tab found. Make sure LinkedIn is open.');
-      return;
-    }
-
-    if (!activeTab.url?.includes('linkedin.com')) {
-      toast.warning('Navigate to LinkedIn to jump to this post.');
-      return;
-    }
-
-    const response = await sendTabMessage(activeTab.id, {
-      type: 'SCROLL_TO_POST',
+    const response = (await sendMessage({
+      type: 'UNSKIP_POST',
       postId,
-    });
+      platform,
+    } as never)) as MessageResponse;
 
-    if (response.success) {
-      toast.success('Scrolled to post');
-    } else {
-      toast.warning('Post not found in current feed. It may have scrolled out of view.');
+    if (!response.success) {
+      throw new Error(response.error ?? 'Failed to unskip post');
     }
+
+    // Reload posts to reflect the change
+    await loadPosts();
+    toast.success('Post moved back to queue');
   } catch (error) {
-    console.error('Failed to jump to post:', error);
-    toast.error('Failed to jump to post. Make sure LinkedIn is open.');
-  }
-}
-
-// Handle jump to post - sends message to content script to scroll to the post
-async function handleJumpToPost(postId: string, _platform: string) {
-  try {
-    // Get the active tab
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    const activeTab = tabs[0];
-
-    if (!activeTab?.id) {
-      toast.error('No active tab found. Make sure LinkedIn is open.');
-      return;
-    }
-
-    // Check if we're on LinkedIn
-    if (!activeTab.url?.includes('linkedin.com')) {
-      toast.warning('Navigate to LinkedIn to jump to this post.');
-      return;
-    }
-
-    // Send message to content script to scroll to the post
-    const response = await sendTabMessage(activeTab.id, {
-      type: 'SCROLL_TO_POST',
-      postId,
-    });
-
-    if (response.success) {
-      toast.success('Scrolled to post');
-    } else {
-      // Post not found in DOM
-      toast.warning('Post not found in current feed. It may have scrolled out of view.');
-    }
-  } catch (error) {
-    console.error('Failed to jump to post:', error);
-    toast.error('Failed to jump to post. Make sure LinkedIn is open.');
+    console.error('Failed to unskip post:', error);
+    toast.error('Failed to unskip post');
   }
 }
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 p-4">
+  <div class="min-h-screen bg-gray-50 p-4 dark:bg-gray-900">
     <!-- Toast notifications -->
     <Toast />
 
@@ -357,7 +362,7 @@ async function handleJumpToPost(postId: string, _platform: string) {
       >
         <div
           v-if="!isOnline"
-          class="mb-4 flex items-center gap-2 rounded-lg bg-yellow-50 border border-yellow-200 px-3 py-2"
+          class="mb-4 flex items-center gap-2 rounded-lg bg-yellow-50 border border-yellow-200 px-3 py-2 dark:bg-yellow-900/30 dark:border-yellow-700"
         >
           <svg class="h-5 w-5 text-yellow-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -367,21 +372,24 @@ async function handleJumpToPost(postId: string, _platform: string) {
               d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414"
             />
           </svg>
-          <span class="text-sm text-yellow-700"> You're offline. Some features may be unavailable. </span>
+          <span class="text-sm text-yellow-700 dark:text-yellow-300">
+            You're offline. Some features may be unavailable.
+          </span>
         </div>
       </Transition>
 
       <!-- Header -->
       <div class="mb-4 flex items-center justify-between">
         <div class="flex items-baseline gap-2">
-          <h1 class="text-xl font-bold text-gray-900">ReplyQueue</h1>
-          <span v-if="extensionVersion" class="text-xs text-gray-400">v{{ extensionVersion }}</span>
+          <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">ReplyQueue</h1>
+          <span v-if="extensionVersion" class="text-xs text-gray-400 dark:text-gray-500">v{{ extensionVersion }}</span>
         </div>
         <div class="flex items-center gap-2">
           <TabStatusBadge :is-active="isActiveOnPlatform" :platform="currentPlatform" />
+          <ThemeToggle />
           <button
             type="button"
-            class="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            class="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
             @click="openSettings"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -413,7 +421,7 @@ async function handleJumpToPost(postId: string, _platform: string) {
       >
         <div
           v-if="isQueueAtLimit"
-          class="mb-4 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2"
+          class="mb-4 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 dark:bg-amber-900/30 dark:border-amber-700"
         >
           <svg class="h-5 w-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -423,28 +431,34 @@ async function handleJumpToPost(postId: string, _platform: string) {
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          <span class="text-sm text-amber-700">
+          <span class="text-sm text-amber-700 dark:text-amber-300">
             Queue limit reached ({{ maxQueueSize }} posts). Run AI Match or adjust limit in settings.
           </span>
         </div>
       </Transition>
 
       <!-- Filter tabs -->
-      <div class="mb-4 flex rounded-lg bg-gray-100 p-1">
+      <div class="mb-4 flex rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
         <button
-          v-for="filter in filters"
+          v-for="filter in visibleFilters"
           :key="filter.value"
           type="button"
-          class="flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-colors"
+          class="flex-1 flex flex-col items-center rounded-md px-2 py-1.5 text-xs font-medium transition-colors"
           :class="
-            currentFilter === filter.value ? 'bg-white text-gray-900 shadow' : 'text-gray-600 hover:text-gray-900'
+            currentFilter === filter.value
+              ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-gray-100'
+              : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
           "
           @click="setFilter(filter.value)"
         >
-          {{ filter.label }}
+          <span>{{ filter.label }}</span>
           <span
-            class="ml-1 rounded-full px-1.5 text-xs"
-            :class="currentFilter === filter.value ? 'bg-blue-100 text-blue-600' : 'bg-gray-200 text-gray-500'"
+            class="mt-0.5 rounded-full px-1.5 text-xs"
+            :class="
+              currentFilter === filter.value
+                ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300'
+                : 'bg-gray-200 text-gray-500 dark:bg-gray-600 dark:text-gray-400'
+            "
           >
             {{ getFilterCount(filter.value) }}
           </span>
@@ -459,7 +473,10 @@ async function handleJumpToPost(postId: string, _platform: string) {
       </div>
 
       <!-- Error state -->
-      <div v-else-if="error" class="rounded-lg bg-red-50 border border-red-200 p-4 text-center">
+      <div
+        v-else-if="error"
+        class="rounded-lg bg-red-50 border border-red-200 p-4 text-center dark:bg-red-900/30 dark:border-red-700"
+      >
         <svg class="mx-auto h-10 w-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
@@ -468,12 +485,12 @@ async function handleJumpToPost(postId: string, _platform: string) {
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-red-800">Something went wrong</h3>
-        <p class="mt-1 text-sm text-red-600">{{ formatErrorMessage(error) }}</p>
+        <h3 class="mt-2 text-sm font-medium text-red-800 dark:text-red-300">Something went wrong</h3>
+        <p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ formatErrorMessage(error) }}</p>
         <div class="mt-4 flex justify-center gap-3">
           <button
             type="button"
-            class="rounded-md bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50"
+            class="rounded-md bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50 dark:bg-red-800 dark:text-red-200 dark:hover:bg-red-700"
             :disabled="!isOnline"
             @click="refreshMatches"
           >
@@ -491,7 +508,7 @@ async function handleJumpToPost(postId: string, _platform: string) {
           </button>
           <button
             type="button"
-            class="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+            class="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
             @click="openSettings"
           >
             Settings
@@ -499,12 +516,17 @@ async function handleJumpToPost(postId: string, _platform: string) {
         </div>
       </div>
 
-      <!-- Empty state for queued tab -->
+      <!-- Empty state for queued tab (only show when NOT actively matching) -->
       <div
-        v-else-if="currentFilter === 'queued' && queuedPosts.length === 0"
-        class="rounded-lg bg-white p-6 text-center shadow"
+        v-else-if="currentFilter === 'queued' && queuedPosts.length === 0 && !isAIMatching"
+        class="rounded-lg bg-white p-6 text-center shadow dark:bg-gray-800"
       >
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -512,8 +534,8 @@ async function handleJumpToPost(postId: string, _platform: string) {
             d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
           />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">Queue is empty</h3>
-        <p class="mt-1 text-xs text-gray-500">
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">Queue is empty</h3>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
           <template v-if="extractedPosts.length > 0">
             All posts have been analyzed. Navigate to LinkedIn to collect more posts.
           </template>
@@ -526,9 +548,14 @@ async function handleJumpToPost(postId: string, _platform: string) {
       <!-- Empty state for unmatched tab -->
       <div
         v-else-if="currentFilter === 'unmatched' && unmatchedPosts.length === 0"
-        class="rounded-lg bg-white p-6 text-center shadow"
+        class="rounded-lg bg-white p-6 text-center shadow dark:bg-gray-800"
       >
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -536,11 +563,15 @@ async function handleJumpToPost(postId: string, _platform: string) {
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">No unmatched posts</h3>
-        <p class="mt-1 text-xs text-gray-500">
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No unmatched posts</h3>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
           Posts that don't match your blog content will appear here after AI analysis.
         </p>
-        <button type="button" class="mt-3 text-sm text-blue-600 hover:underline" @click="setFilter('queued')">
+        <button
+          type="button"
+          class="mt-3 text-sm text-blue-600 hover:underline dark:text-blue-400"
+          @click="setFilter('queued')"
+        >
           View queued posts
         </button>
       </div>
@@ -548,9 +579,14 @@ async function handleJumpToPost(postId: string, _platform: string) {
       <!-- Empty state for matched/replied/skipped tabs -->
       <div
         v-else-if="currentFilter !== 'queued' && currentFilter !== 'unmatched' && filteredMatchedPosts.length === 0"
-        class="rounded-lg bg-white p-6 text-center shadow"
+        class="rounded-lg bg-white p-6 text-center shadow dark:bg-gray-800"
       >
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          class="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -558,14 +594,18 @@ async function handleJumpToPost(postId: string, _platform: string) {
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">No {{ currentFilter }} posts</h3>
-        <p class="mt-1 text-xs text-gray-500">
+        <h3 class="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No {{ currentFilter }} posts</h3>
+        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
           <template v-if="currentFilter === 'matched'">
             Use the AI Match button to analyze queued posts and find relevant matches.
           </template>
           <template v-else> No posts with status "{{ currentFilter }}" found. </template>
         </p>
-        <button type="button" class="mt-3 text-sm text-blue-600 hover:underline" @click="setFilter('queued')">
+        <button
+          type="button"
+          class="mt-3 text-sm text-blue-600 hover:underline dark:text-blue-400"
+          @click="setFilter('queued')"
+        >
           View queued posts
         </button>
       </div>
@@ -573,20 +613,31 @@ async function handleJumpToPost(postId: string, _platform: string) {
       <!-- Queued posts list -->
       <div v-else-if="currentFilter === 'queued'" class="space-y-4">
         <!-- AI Match button -->
-        <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
+        <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-700 dark:bg-blue-900/30">
           <div class="flex items-center justify-between">
             <div class="flex-1">
-              <p class="text-sm font-medium text-blue-900">Ready to analyze?</p>
-              <p class="text-xs text-blue-700">
-                {{ queuedPosts.length }} post{{ queuedPosts.length === 1 ? '' : 's' }} in queue
+              <p class="text-sm font-medium text-blue-900 dark:text-blue-200">
+                <template v-if="isAIMatching">Processing...</template>
+                <template v-else>Ready to analyze?</template>
+              </p>
+              <p class="text-xs text-blue-700 dark:text-blue-400">
+                <template v-if="isAIMatching && queuedPosts.length === 0">
+                  Running heat check on matched posts...
+                </template>
+                <template v-else-if="hasSelectedPosts">
+                  {{ selectedPostIds.size }} post{{ selectedPostIds.size === 1 ? '' : 's' }} selected
+                </template>
+                <template v-else>
+                  {{ queuedPosts.length }} post{{ queuedPosts.length === 1 ? '' : 's' }} in queue
+                </template>
               </p>
             </div>
             <button
               type="button"
-              class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-400"
+              class="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-600 dark:disabled:bg-blue-800"
               :disabled="isAIMatching || !config.apiKey || queuedPosts.length === 0"
-              title="Find relevant posts and analyze their tone"
-              @click="runAIMatching"
+              :title="hasSelectedPosts ? 'Analyze selected posts' : 'Analyze all queued posts'"
+              @click="runAIMatching()"
             >
               <svg v-if="isAIMatching" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -595,11 +646,13 @@ async function handleJumpToPost(postId: string, _platform: string) {
               <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              {{ isAIMatching ? 'Analyzing...' : 'AI Match' }}
+              <template v-if="isAIMatching">Analyzing...</template>
+              <template v-else-if="hasSelectedPosts">AI Match Selected ({{ selectedPostIds.size }})</template>
+              <template v-else>AI Match All</template>
             </button>
           </div>
-          <p v-if="aiMatchError" class="mt-2 text-xs text-red-600">{{ aiMatchError }}</p>
-          <p v-if="!config.apiKey" class="mt-2 text-xs text-amber-600">
+          <p v-if="aiMatchError" class="mt-2 text-xs text-red-600 dark:text-red-400">{{ aiMatchError }}</p>
+          <p v-if="!config.apiKey" class="mt-2 text-xs text-amber-600 dark:text-amber-400">
             Configure your API key in settings to use AI matching.
           </p>
         </div>
@@ -608,16 +661,20 @@ async function handleJumpToPost(postId: string, _platform: string) {
           v-for="post in queuedPosts"
           :key="`${post.platform}:${post.id}`"
           :post="post"
+          :selected="isPostSelected(post.id, post.platform)"
+          :show-checkbox="true"
+          :is-matching="matchingPostId === getPostKey(post.id, post.platform)"
           @open="handleOpenQueued"
-          @jump-to-post="handleJumpToQueuedPost"
           @skip="handleSkipQueued"
+          @select="handleSelectPost"
+          @ai-match="handleAIMatchSingle"
         />
       </div>
 
       <!-- Unmatched posts list -->
       <div v-else-if="currentFilter === 'unmatched'" class="space-y-4">
-        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <p class="text-sm text-gray-600">
+        <div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+          <p class="text-sm text-gray-600 dark:text-gray-400">
             These posts were analyzed but didn't match your blog content above the relevance threshold.
           </p>
         </div>
@@ -626,8 +683,8 @@ async function handleJumpToPost(postId: string, _platform: string) {
           v-for="post in unmatchedPosts"
           :key="`${post.platform}:${post.id}`"
           :post="post"
+          variant="unmatched"
           @open="handleOpenQueued"
-          @jump-to-post="handleJumpToQueuedPost"
         />
       </div>
 
@@ -638,17 +695,17 @@ async function handleJumpToPost(postId: string, _platform: string) {
           :key="`${match.post.platform}:${match.post.id}`"
           :match="match"
           @skip="handleSkip"
+          @unskip="handleUnskip"
           @replied="handleReplied"
           @open="handleOpen"
           @regenerate="handleRegenerate"
-          @jump-to-post="handleJumpToPost"
         />
       </div>
 
       <!-- Refreshing overlay -->
       <div
         v-if="isRefreshing"
-        class="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-4 py-2 text-sm text-white shadow-lg"
+        class="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-4 py-2 text-sm text-white shadow-lg dark:bg-blue-700"
       >
         <span class="flex items-center gap-2">
           <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">

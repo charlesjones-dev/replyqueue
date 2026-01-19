@@ -4,7 +4,7 @@
  */
 
 import type { RssFeed, RssFeedItem, CachedRssFeed } from '../shared/types';
-import { STORAGE_KEYS, DEFAULT_MATCHING_PREFERENCES } from '../shared/constants';
+import { STORAGE_KEYS, DEFAULT_MATCHING_PREFERENCES, DEFAULT_MAX_RSS_ITEMS } from '../shared/constants';
 
 const LOG_PREFIX = '[ReplyQueue:RSS]';
 
@@ -331,7 +331,8 @@ export async function clearFeedCache(): Promise<void> {
  */
 export async function fetchRssFeedWithCache(
   url: string,
-  ttlMinutes: number = DEFAULT_MATCHING_PREFERENCES.cacheTtlMinutes
+  ttlMinutes: number = DEFAULT_MATCHING_PREFERENCES.cacheTtlMinutes,
+  maxItems: number = DEFAULT_MAX_RSS_ITEMS
 ): Promise<{ feed: RssFeed; fromCache: boolean }> {
   // Check cache first
   const cached = await getCachedFeed();
@@ -340,14 +341,26 @@ export async function fetchRssFeedWithCache(
     console.log(
       `${LOG_PREFIX} Using cached feed (expires in ${Math.round((cached.fetchedAt + cached.ttl - Date.now()) / 1000 / 60)} minutes)`
     );
-    return { feed: cached.feed, fromCache: true };
+    // Apply maxItems limit to cached feed (in case limit changed since caching)
+    const limitedFeed = {
+      ...cached.feed,
+      items: cached.feed.items.slice(0, maxItems),
+    };
+    return { feed: limitedFeed, fromCache: true };
   }
 
   // Fetch fresh feed
   const feed = await fetchRssFeed(url);
-  await cacheFeed(feed, url, ttlMinutes);
 
-  return { feed, fromCache: false };
+  // Apply maxItems limit before caching
+  const limitedFeed = {
+    ...feed,
+    items: feed.items.slice(0, maxItems),
+  };
+
+  await cacheFeed(limitedFeed, url, ttlMinutes);
+
+  return { feed: limitedFeed, fromCache: false };
 }
 
 /**

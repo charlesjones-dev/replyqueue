@@ -1,6 +1,6 @@
 # Privacy Policy for ReplyQueue
 
-**Last Updated:** January 2025
+**Last Updated:** January 2026
 
 ReplyQueue is a Chrome extension that helps content creators find social media posts relevant to their blog content and generate reply suggestions. This privacy policy explains how we handle your data.
 
@@ -21,15 +21,22 @@ All of the following data is stored locally on your device using Chrome's storag
 
 | Data Type | Storage Location | Purpose |
 |-----------|------------------|---------|
-| OpenRouter API Key | chrome.storage.sync | Authenticate with AI service |
+| OpenRouter API Key | chrome.storage.local | Authenticate with AI service (never synced for security) |
 | RSS Feed URL | chrome.storage.sync | Fetch your blog content |
 | Selected AI Model | chrome.storage.sync | Configure AI preferences |
-| Matching Preferences | chrome.storage.sync | Configure relevance settings |
-| Writing Style Examples | chrome.storage.sync/local | Personalize reply suggestions |
+| Matching Preferences | chrome.storage.sync | Configure relevance settings (threshold, cache TTL) |
+| Model Filter Preferences | chrome.storage.sync | Filter available AI models by criteria |
+| Communication Preferences | chrome.storage.sync | Custom instructions for reply tone/style |
+| Content Char Limits | chrome.storage.sync | Configure how much content to send to AI |
+| RSS Limits | chrome.storage.sync | Max RSS items to fetch and include in AI prompts |
+| Theme Preference | chrome.storage.sync | Dark, light, or system theme setting |
+| Writing Style Examples | chrome.storage.local | Personalize reply suggestions |
 | Extracted Posts | chrome.storage.local | Store posts from social media feeds |
-| Matched Posts | chrome.storage.local | Cache matching results |
+| Matched Posts | chrome.storage.local | Cache matching results with scores |
+| Evaluated Post IDs | chrome.storage.local | Track which posts have been analyzed |
 | Cached RSS Data | chrome.storage.local | Reduce network requests |
 | Cached Model List | chrome.storage.local | OpenRouter model metadata |
+| AI Match Cache | chrome.storage.local | Cache AI matching results to avoid re-processing |
 
 ### What We Do NOT Collect
 
@@ -52,12 +59,14 @@ ReplyQueue communicates with two external services. These communications only oc
 - When you fetch the list of available AI models
 - When you scan for relevant posts (AI matching)
 - When you generate reply suggestions
+- When heat check analyzes post tone/sentiment
 
 **What data is sent:**
 - Your API key (for authentication)
-- Post content from your social media feed (for matching)
+- Post content from your social media feed (for matching and tone analysis)
 - RSS feed content summaries (for matching)
 - Your writing style examples (if provided, for reply generation)
+- Your communication preferences (if provided, for reply style customization)
 
 **What data is NOT sent:**
 - Your personal information
@@ -116,6 +125,11 @@ All your data is stored locally and can be viewed:
 1. Open the extension's Settings panel
 2. Use the "Clear Cache" button
 
+**Reset extension (clear all settings and data):**
+1. Open the extension's Settings panel
+2. Scroll to "Reset Extension" section
+3. Click "Reset Extension" to clear all data and return to setup wizard
+
 ### Export Your Data
 
 Configuration data can be viewed in Chrome's storage inspector. Export functionality may be added in future versions.
@@ -138,6 +152,10 @@ Configuration data can be viewed in Chrome's storage inspector. Export functiona
 |--------|----------------|
 | `linkedin.com` | Extract posts from LinkedIn feeds |
 | `openrouter.ai` | Make API calls for AI matching and reply generation |
+
+### Optional Host Permissions
+
+ReplyQueue requests permission to access your RSS feed URL when you configure it. This is an optional permission that you grant during setup or when changing your RSS feed URL. The extension will prompt you to allow access to your blog's domain (e.g., `https://yourblog.com/*`) before fetching your RSS feed. Denying this permission prompt will prevent the extension from working.
 
 ---
 

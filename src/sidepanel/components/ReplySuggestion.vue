@@ -25,9 +25,11 @@ async function handleCopy() {
 </script>
 
 <template>
-  <div class="group rounded-md border border-gray-200 bg-gray-50 p-3 transition-colors hover:border-gray-300">
+  <div
+    class="group rounded-md border border-gray-200 bg-gray-50 p-3 transition-colors hover:border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:hover:border-gray-500"
+  >
     <!-- Suggestion text -->
-    <p class="text-sm text-gray-700 whitespace-pre-wrap">
+    <p class="text-sm text-gray-700 whitespace-pre-wrap dark:text-gray-300">
       {{ suggestion.text }}
     </p>
 
@@ -36,7 +38,11 @@ async function handleCopy() {
       <button
         type="button"
         class="flex items-center gap-1 rounded px-2 py-1 text-xs transition-colors"
-        :class="isCopied ? 'bg-green-100 text-green-700' : 'bg-white text-gray-600 hover:bg-gray-100'"
+        :class="
+          isCopied
+            ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
+            : 'bg-white text-gray-600 hover:bg-gray-100 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500'
+        "
         @click="handleCopy"
       >
         <template v-if="isCopied">

@@ -11,17 +11,17 @@ const statusInfo = computed(() => {
     return {
       label: 'Active',
       dotColor: 'bg-green-500',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-700',
-      borderColor: 'border-green-200',
+      bgColor: 'bg-green-50 dark:bg-green-900/30',
+      textColor: 'text-green-700 dark:text-green-400',
+      borderColor: 'border-green-200 dark:border-green-800',
     };
   }
   return {
     label: 'Inactive',
-    dotColor: 'bg-gray-400',
-    bgColor: 'bg-gray-50',
-    textColor: 'text-gray-500',
-    borderColor: 'border-gray-200',
+    dotColor: 'bg-gray-400 dark:bg-gray-500',
+    bgColor: 'bg-gray-50 dark:bg-gray-700',
+    textColor: 'text-gray-500 dark:text-gray-400',
+    borderColor: 'border-gray-200 dark:border-gray-600',
   };
 });
 

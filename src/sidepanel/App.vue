@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useAppState } from './composables/useAppState';
 import { useConfig } from './composables/useConfig';
+import { useTheme } from './composables/useTheme';
 import SetupView from './views/SetupView.vue';
 import MainView from './views/MainView.vue';
 import SettingsView from './views/SettingsView.vue';
@@ -10,9 +11,12 @@ import InsufficientCreditsModal from './components/InsufficientCreditsModal.vue'
 
 const { currentView, checkSetupStatus } = useAppState();
 const { loadConfig } = useConfig();
+const { initializeTheme } = useTheme();
 const isInitializing = ref(true);
 
 onMounted(async () => {
+  // Initialize theme first to prevent flash of wrong theme
+  await initializeTheme();
   // Load config into shared state before checking setup status
   await loadConfig();
   checkSetupStatus();
@@ -21,7 +25,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <!-- Initial loading state -->
     <div v-if="isInitializing" class="flex min-h-screen items-center justify-center">
       <LoadingSpinner size="lg" label="Loading ReplyQueue..." />

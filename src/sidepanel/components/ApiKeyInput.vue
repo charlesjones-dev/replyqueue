@@ -33,13 +33,13 @@ function toggleVisibility() {
       :value="modelValue"
       :placeholder="placeholder ?? 'sk-or-v1-...'"
       :disabled="disabled"
-      class="w-full rounded-md border-gray-300 pr-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+      class="w-full rounded-md border-gray-300 pr-10 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 dark:focus:border-blue-400 dark:focus:ring-blue-400 dark:disabled:bg-gray-600"
       :class="{ 'border-red-500 focus:border-red-500 focus:ring-red-500': error }"
       @input="updateValue"
     />
     <button
       type="button"
-      class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+      class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
       @click="toggleVisibility"
     >
       <svg v-if="showKey" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
