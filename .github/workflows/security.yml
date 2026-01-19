@@ -1,0 +1,29 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  semgrep:
+    name: Semgrep Scan
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep
+        # Excluded rules produce false positives in this codebase:
+        # - unsafe-formatstring: LOG_PREFIX is a hardcoded constant, not user input
+        # - detect-non-literal-regexp: tagName/attrName are internal XML parsing params
+        run: >-
+          semgrep scan
+          --config auto
+          --config p/javascript
+          --config p/typescript
+          --exclude-rule javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
+          --exclude-rule javascript.lang.security.audit.detect-non-literal-regexp.detect-non-literal-regexp
+          --error

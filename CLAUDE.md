@@ -13,6 +13,8 @@ pnpm dev          # Start dev server with hot reload
 pnpm build        # Production build (runs vue-tsc first)
 pnpm test         # Run all tests once
 pnpm test:watch   # Run tests in watch mode
+pnpm lint         # Run ESLint (includes security rules)
+pnpm audit:check  # Scan dependencies for vulnerabilities
 ```
 
 **Loading the extension in Chrome:**
@@ -122,6 +124,39 @@ pnpm build        # Type check + build
 pnpm lint:fix     # Auto-fix lint issues
 pnpm format       # Auto-fix formatting
 pnpm test         # Run tests
+pnpm audit:check  # Check for vulnerable dependencies
 ```
 
 Fix any errors before considering the implementation complete.
+
+## Security
+
+### Security Tooling
+
+The project uses three layers of security scanning:
+
+1. **eslint-plugin-security** - Integrated into ESLint, runs on every `pnpm lint`
+   - Detects eval, non-literal RegExp, child_process usage, unsafe regex patterns
+   - `detect-object-injection` disabled (too many false positives with TS)
+
+2. **pnpm audit** - Dependency vulnerability scanning via `pnpm audit:check`
+   - Fails on moderate+ severity vulnerabilities
+   - Run before releases or when updating dependencies
+
+3. **Semgrep** - SAST in GitHub Actions CI (`.github/workflows/security.yml`)
+   - Runs on push/PR to main
+   - Uses `auto`, `p/javascript`, `p/typescript` rulesets
+   - Two rules excluded as false positives (see workflow comments)
+
+### Security Patterns in Codebase
+
+- **Origin validation**: `src/background/index.ts` validates content script origins against `ALLOWED_CONTENT_SCRIPT_ORIGINS`
+- **Input validation**: `src/shared/validation.ts` sanitizes all user inputs
+- **Secure storage**: API keys in `chrome.storage.local`, never in sync storage or exposed to content scripts
+- **No dynamic code**: ESLint blocks eval/Function patterns
+
+### Running Semgrep Locally
+
+```bash
+docker run --rm -v "$(pwd):/src" semgrep/semgrep semgrep scan --config auto --config p/javascript --config p/typescript /src
+```

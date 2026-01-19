@@ -29,10 +29,13 @@ function stripHtml(html: string): string {
  */
 function extractTagContent(xml: string, tagName: string): string {
   // Handle namespaced tags (e.g., content:encoded, dc:creator)
+  // tagName is from internal code (hardcoded tag names), not user input
+  /* eslint-disable security/detect-non-literal-regexp */
   const patterns = [
     new RegExp(`<${tagName}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tagName}>`, 'i'),
     new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'i'),
   ];
+  /* eslint-enable security/detect-non-literal-regexp */
 
   for (const pattern of patterns) {
     const match = xml.match(pattern);
@@ -48,6 +51,8 @@ function extractTagContent(xml: string, tagName: string): string {
  * Extract attribute value from a tag
  */
 function extractAttribute(tag: string, attrName: string): string {
+  // attrName is from internal code (hardcoded attribute names), not user input
+  // eslint-disable-next-line security/detect-non-literal-regexp
   const match = tag.match(new RegExp(`${attrName}=["']([^"']*)["']`, 'i'));
   return match ? match[1] : '';
 }

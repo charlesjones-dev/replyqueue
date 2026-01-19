@@ -3,6 +3,7 @@ import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 import vue from 'eslint-plugin-vue';
 import vueParser from 'vue-eslint-parser';
+import security from 'eslint-plugin-security';
 import globals from 'globals';
 
 export default [
@@ -27,10 +28,13 @@ export default [
     plugins: {
       '@typescript-eslint': tseslint,
       vue,
+      security,
     },
     rules: {
       ...tseslint.configs.recommended.rules,
       ...vue.configs['flat/recommended'].rules,
+      ...security.configs.recommended.rules,
+      'security/detect-object-injection': 'off', // Too many false positives with TypeScript strict mode
       'vue/multi-word-component-names': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
@@ -61,9 +65,12 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tseslint,
+      security,
     },
     rules: {
       ...tseslint.configs.recommended.rules,
+      ...security.configs.recommended.rules,
+      'security/detect-object-injection': 'off', // Too many false positives with TypeScript strict mode
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-undef': 'off',

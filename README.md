@@ -230,6 +230,48 @@ See [privacy-policy.md](./privacy-policy.md) for the full privacy policy.
 
 ---
 
+## Security
+
+ReplyQueue uses multiple layers of security tooling to catch vulnerabilities early.
+
+### Static Analysis
+
+| Tool | Purpose | Command |
+|------|---------|---------|
+| `eslint-plugin-security` | Detects common security anti-patterns in JS/TS | `pnpm lint` |
+| `pnpm audit` | Scans dependencies for known CVEs | `pnpm audit:check` |
+| Semgrep | SAST scanning for injection, XSS, and more | CI only (or Docker locally) |
+
+### CI Integration
+
+The `.github/workflows/security.yml` workflow runs Semgrep on every push and PR to `main`, using:
+- `auto` - Semgrep's recommended security rules
+- `p/javascript` - JavaScript-specific security patterns
+- `p/typescript` - TypeScript-specific security patterns
+
+### Running Security Checks Locally
+
+```bash
+# ESLint security rules (included in lint)
+pnpm lint
+
+# Dependency vulnerability scan
+pnpm audit:check
+
+# Semgrep via Docker
+docker run --rm -v "$(pwd):/src" semgrep/semgrep semgrep scan --config auto --config p/javascript --config p/typescript /src
+```
+
+### Security Practices
+
+- **Origin validation** - Background script validates message origins against allowlist
+- **Input sanitization** - All user inputs validated before processing
+- **No eval/Function** - Dynamic code execution patterns are blocked by ESLint
+- **Secure storage** - API keys stored in `chrome.storage.local`, never exposed to content scripts
+- **CSP compliance** - Extension follows Chrome's Content Security Policy requirements
+
+---
+
 ## Troubleshooting
 
 ### Extension not loading
