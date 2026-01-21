@@ -13,6 +13,9 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    // Disable minification for Chrome Web Store review
+    // Minified code increases review time significantly
+    minify: false,
     rollupOptions: {
       input: {
         sidepanel: resolve(__dirname, 'src/sidepanel/index.html'),

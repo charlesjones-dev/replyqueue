@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-01-21
+
+### Added
+
+- Package scripts for Chrome Web Store submission (`scripts/package.ps1` for Windows, `scripts/package.sh` for macOS/Linux)
+
+### Changed
+
+- Disabled minification in production builds to speed up Chrome Web Store review process (unminified code is easier for reviewers to verify)
+
 ## [1.1.0] - 2025-01-19
 
 ### Added
@@ -50,6 +60,7 @@ Initial release of ReplyQueue, a Chrome extension that helps content creators fi
 - Reply suggestion generation with customizable writing style
 - Side panel UI with post cards, filtering, and settings
 
-[Unreleased]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/charlesjones-dev/replyqueue/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/charlesjones-dev/replyqueue/releases/tag/v1.0.0
