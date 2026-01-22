@@ -1,5 +1,6 @@
 # ReplyQueue
 
+[![Chrome Web Store](https://img.shields.io/badge/Chrome-Install-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/replyqueue/lkdecdgjijicaehjngnehdhoahjipnpg)
 [![Vue 3](https://img.shields.io/badge/Vue-3.4-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
@@ -7,6 +8,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 **Stop scrolling past engagement opportunities.** ReplyQueue watches your LinkedIn feed and surfaces posts that align with your blog content, so you can join conversations that matter.
+
+**[Install from Chrome Web Store →](https://chromewebstore.google.com/detail/replyqueue/lkdecdgjijicaehjngnehdhoahjipnpg)**
 
 ## Why ReplyQueue?
 
@@ -20,19 +23,16 @@ Content creators spend hours scrolling social feeds hoping to find relevant disc
 - **Privacy-First** - No analytics, no tracking, your data stays local
 - **Extensible** - Platform adapter pattern makes adding new networks straightforward
 
-## Quick Start
-
-```bash
-git clone https://github.com/charlesjones-dev/replyqueue.git
-cd replyqueue
-pnpm install && pnpm build
-```
-
-Then load `dist/` as an unpacked extension in Chrome. See [Installation](#installation) for detailed steps.
-
----
-
 ## Installation
+
+### From Chrome Web Store (Recommended)
+
+**[Install ReplyQueue →](https://chromewebstore.google.com/detail/replyqueue/lkdecdgjijicaehjngnehdhoahjipnpg)**
+
+After installation:
+1. Click the puzzle piece icon in Chrome toolbar
+2. Pin ReplyQueue for easy access
+3. Click the ReplyQueue icon to open the side panel and start setup
 
 ### From Source (Development)
 
