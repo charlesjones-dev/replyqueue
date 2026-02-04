@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-02-04
+
+### Fixed
+
+- Updated LinkedIn DOM selectors for February 2026 LinkedIn UI changes (CSS-in-JS with hashed class names)
+- Post detection now uses stable `data-view-name` and `data-testid` attributes instead of class names
+- Post ID extraction uses `componentkey` attribute instead of deprecated `data-urn`
+
 ## [1.1.1] - 2025-01-21
 
 ### Added
@@ -60,7 +68,8 @@ Initial release of ReplyQueue, a Chrome extension that helps content creators fi
 - Reply suggestion generation with customizable writing style
 - Side panel UI with post cards, filtering, and settings
 
-[Unreleased]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/charlesjones-dev/replyqueue/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/charlesjones-dev/replyqueue/releases/tag/v1.0.0

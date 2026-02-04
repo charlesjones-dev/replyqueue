@@ -1,64 +1,66 @@
 /**
  * LinkedIn DOM selectors for post extraction
- * These selectors target LinkedIn's feed structure as of 2024-2025
+ * These selectors target LinkedIn's feed structure as of 2025-2026
  * Note: LinkedIn frequently changes their DOM structure, so these may need updates
+ *
+ * As of Feb 2026, LinkedIn uses CSS-in-JS with hashed class names.
+ * We rely on data-view-name, data-testid, and structural patterns instead of class names.
  */
 
 import type { FeedSelectors } from '../types';
 
 /**
  * LinkedIn-specific DOM selectors
- * Uses a combination of data attributes, semantic classes, and ARIA roles
- * to be more resilient to LinkedIn's frequent DOM changes
+ * Uses data-view-name, data-testid, and ARIA attributes
+ * which are more stable than hashed CSS class names
  */
 export const linkedInSelectors: FeedSelectors = {
   // Main feed container
-  feedContainer: 'main.scaffold-layout__main',
+  feedContainer: '[data-testid="mainFeed"]',
 
-  // Individual post items - LinkedIn uses data-urn for post identification
-  // The feed-shared-update-v2 class is the main post container
-  postItem: '[data-urn*="urn:li:activity:"], .feed-shared-update-v2',
+  // Individual post items - uses data-view-name for post identification
+  // Each post has data-view-name="feed-full-update" or role="listitem" with componentkey
+  postItem: '[data-view-name="feed-full-update"]',
 
   // Author information
-  // LinkedIn uses update-components-actor for author info section
+  // The author name is in a link with data-view-name="feed-actor-image" (company)
+  // or nearby text elements. For personal posts, look in sibling elements.
   authorName:
-    '.update-components-actor__name .visually-hidden, .update-components-actor__title .visually-hidden, .update-components-actor__name span[aria-hidden="true"], .update-components-actor__title span[dir="ltr"]',
+    '[data-view-name="feed-actor-image"] + a p:first-of-type, [data-view-name="feed-actor-image"] ~ div p:first-of-type',
 
+  // Author headline - second paragraph in the actor info section
   authorHeadline:
-    '.update-components-actor__description, .update-components-actor__subtitle, .update-components-actor__sub-description',
+    '[data-view-name="feed-actor-image"] + a p:nth-of-type(2), [data-view-name="feed-actor-image"] ~ div p:nth-of-type(2)',
 
+  // Author profile link - links containing /in/ or /company/
   authorProfileLink:
-    '.update-components-actor__container-link, .update-components-actor__image a, .update-components-actor a[href*="/in/"]',
+    '[data-view-name="feed-actor-image"][href*="/in/"], [data-view-name="feed-actor-image"][href*="/company/"], a[href*="/in/"][data-view-name="feed-actor-image"]',
 
-  // Post content - LinkedIn wraps content in different ways
-  postContent:
-    '.update-components-text, .feed-shared-update-v2__description, .feed-shared-text, .feed-shared-inline-show-more-text, .break-words',
+  // Post content - expandable text box or feed commentary
+  postContent: '[data-testid="expandable-text-box"], [data-view-name="feed-commentary"]',
 
-  // Timestamp - LinkedIn shows relative time
+  // Timestamp - third info line in actor section (contains time like "24m")
   postTimestamp:
-    '.update-components-actor__sub-description time, .feed-shared-actor__sub-description time, time.visually-hidden',
+    '[data-view-name="feed-actor-image"] + a p:nth-of-type(3), [data-view-name="feed-actor-image"] ~ div p:nth-of-type(3)',
 
-  // Engagement metrics - social counts are in social-details-social-counts
-  reactionCount:
-    '.social-details-social-counts__reactions-count, .social-details-social-counts__count-value, button[aria-label*="reaction"] span',
+  // Engagement metrics
+  reactionCount: '[data-view-name="feed-reaction-count"]',
 
-  commentCount:
-    '.social-details-social-counts__comments, button[aria-label*="comment"] span.social-details-social-counts__count-value',
+  commentCount: '[data-view-name="feed-comment-count"]',
 
-  repostCount: '.social-details-social-counts__item--repost, button[aria-label*="repost"] span',
+  repostCount: '[data-view-name="feed-repost-count"]',
 
-  // Repost detection - Look for "reposted" text or repost header
-  repostIndicator: '.update-components-header__text-view, .feed-shared-header, [data-urn*="reshare"]',
+  // Repost detection - header text for reposts
+  repostIndicator: '[data-view-name="feed-header-text"]',
 
-  // Article shares - when someone shares a link/article
-  articleShare: '.update-components-article, .feed-shared-article, .update-components-mini-update-v2',
+  // Article shares
+  articleShare: '[data-view-name="feed-update-article"]',
 
   // Images in posts
-  postImage: '.update-components-image, .feed-shared-image, .feed-shared-carousel',
+  postImage: '[data-view-name="feed-update-image"]',
 
-  // Post link/actions - for getting permalink
-  postLink:
-    '.feed-shared-control-menu, .update-components-update-v2__control-menu, button[aria-label*="Open control menu"]',
+  // Post link/actions - control menu button
+  postLink: '[data-view-name="feed-control-menu"]',
 };
 
 /**
@@ -66,53 +68,65 @@ export const linkedInSelectors: FeedSelectors = {
  */
 export const linkedInExtraSelectors = {
   // Poll content
-  pollContent: '.feed-shared-poll, .update-components-poll',
+  pollContent: '[data-view-name="feed-update-poll"]',
 
   // Document/PDF shares
-  documentShare: '.feed-shared-document, .update-components-document',
+  documentShare: '[data-view-name="feed-update-document"]',
 
   // Video content
-  videoContent: '.feed-shared-linkedin-video, .update-components-video',
+  videoContent: '[data-view-name="feed-update-video"], .vjs-poster',
 
   // Celebration/event posts
-  celebrationPost: '.feed-shared-celebration, .update-components-celebration',
+  celebrationPost: '[data-view-name="feed-update-celebration"]',
 
-  // Sponsored content indicator
-  sponsoredIndicator: '.feed-shared-actor__sub-description--sponsored, .update-components-actor__sponsored',
+  // Sponsored content indicator - look for "Promoted" text
+  sponsoredIndicator: '[data-view-name="feed-actor-sponsored"]',
 
-  // Original poster in repost
-  originalPoster:
-    '.update-components-mini-update-v2 .update-components-actor__name, .feed-shared-update-v2__reshare .update-components-actor__name',
+  // Original poster in repost - the actor info inside a reposted post
+  originalPoster: '[data-view-name="feed-actor-image"] + a p:first-of-type',
 
   // Original content in repost
-  originalContent:
-    '.update-components-mini-update-v2 .update-components-text, .feed-shared-update-v2__reshare .update-components-text',
+  originalContent: '[data-testid="expandable-text-box"]',
 
   // Comment button for interaction
-  commentButton: 'button[aria-label*="Comment"], .comment-button, .social-actions-button[data-control-name="comment"]',
+  commentButton: 'button[aria-label*="Comment"]',
 
   // Share button
   shareButton: 'button[aria-label*="Share"], button[aria-label*="Repost"]',
 
   // Like button
-  likeButton: 'button[aria-label*="Like"], .react-button, .social-actions-button[data-control-name="react"]',
+  likeButton: 'button[aria-label*="Like"]',
+
+  // Repost header (who reposted)
+  repostHeader: '[data-view-name="feed-header-actor-image"]',
+
+  // Repost header text
+  repostHeaderText: '[data-view-name="feed-header-text"]',
 };
 
 /**
  * Data attribute patterns for extracting post IDs
  */
 export const linkedInDataAttributes = {
-  // Primary post ID attribute
-  postUrn: 'data-urn',
+  // Primary post ID attribute - LinkedIn now uses componentkey
+  postUrn: 'data-urn', // Legacy, may not exist
+  componentKey: 'componentkey',
 
-  // Activity URN pattern (urn:li:activity:1234567890)
+  // Activity URN pattern (urn:li:activity:1234567890) - legacy
   activityUrnPattern: /urn:li:activity:(\d+)/,
 
-  // Share URN pattern (urn:li:share:1234567890)
+  // Share URN pattern (urn:li:share:1234567890) - legacy
   shareUrnPattern: /urn:li:share:(\d+)/,
 
-  // Profile URN pattern
+  // Profile URN pattern - legacy
   profileUrnPattern: /urn:li:fs_miniProfile:([A-Za-z0-9_-]+)/,
+
+  // Component key pattern for post IDs (e.g., "expandedABC123FeedType_MAIN_FEED_RELEVANCE")
+  // The ID is the part between "expanded" and "FeedType"
+  componentKeyPattern: /^expanded(.+?)FeedType/,
+
+  // Alternative component key pattern (just the ID without expanded prefix)
+  componentKeySimplePattern: /^([A-Za-z0-9_-]+)$/,
 };
 
 /**

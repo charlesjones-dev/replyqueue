@@ -1,6 +1,6 @@
 {
   "name": "replyqueue",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "type": "module",
   "homepage": "https://chromewebstore.google.com/detail/replyqueue/lkdecdgjijicaehjngnehdhoahjipnpg",
   "scripts": {

@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LinkedInAdapter } from '../../src/platforms/linkedin/adapter';
 
-// Mock LinkedIn post HTML structure
+// Mock LinkedIn post HTML structure (2025-2026 version using data-view-name attributes)
 function createMockLinkedInPost(options: {
   id?: string;
   authorName?: string;
@@ -27,37 +27,43 @@ function createMockLinkedInPost(options: {
     reactionCount = '42',
   } = options;
 
-  const repostHeader = isRepost ? '<div class="update-components-header__text-view">John reposted this</div>' : '';
+  const repostHeader = isRepost
+    ? `
+      <a data-view-name="feed-header-actor-image" href="https://www.linkedin.com/in/reposter">
+        <figure></figure>
+      </a>
+      <p data-view-name="feed-header-text">
+        <a href="https://www.linkedin.com/in/reposter"><strong>Someone</strong></a> reposted this
+      </p>
+    `
+    : '';
 
-  const sponsoredText = isSponsored ? 'Promoted' : '2h';
+  const timestampText = isSponsored ? 'Promoted' : '2h';
 
-  const imageSection = hasImage ? '<div class="update-components-image"><img src="test.jpg" /></div>' : '';
+  const imageSection = hasImage ? `<div data-view-name="feed-update-image"><img src="test.jpg" /></div>` : '';
 
   return `
-    <div class="feed-shared-update-v2" data-urn="urn:li:activity:${id}">
+    <div data-view-name="feed-full-update" componentkey="expanded${id}FeedType_MAIN_FEED_RELEVANCE">
       ${repostHeader}
-      <div class="update-components-actor">
-        <a class="update-components-actor__container-link" href="https://www.linkedin.com/in/johndoe">
-          <span class="update-components-actor__name">
-            <span class="visually-hidden">${authorName}</span>
-          </span>
-          <span class="update-components-actor__description">${authorHeadline}</span>
-          <span class="update-components-actor__sub-description">
-            <time datetime="2024-01-15T10:00:00.000Z">${sponsoredText}</time>
-          </span>
-        </a>
-      </div>
-      <div class="update-components-text">
-        <span dir="ltr">${content}</span>
-      </div>
+      <a data-view-name="feed-actor-image" href="https://www.linkedin.com/in/johndoe">
+        <figure></figure>
+      </a>
+      <a href="https://www.linkedin.com/in/johndoe">
+        <div>
+          <p>${authorName}</p>
+          <p>${authorHeadline}</p>
+          <p>${timestampText}</p>
+        </div>
+      </a>
+      <p data-view-name="feed-commentary">
+        <span data-testid="expandable-text-box">${content}</span>
+      </p>
       ${imageSection}
-      <div class="social-details-social-counts">
-        <button aria-label="${reactionCount} reactions">
-          <span class="social-details-social-counts__reactions-count">${reactionCount}</span>
-        </button>
-        <button aria-label="5 comments">
-          <span class="social-details-social-counts__comments">5 comments</span>
-        </button>
+      <div data-view-name="feed-reaction-count">
+        <p>${reactionCount}</p>
+      </div>
+      <div data-view-name="feed-comment-count">
+        <p>5 comments</p>
       </div>
     </div>
   `;
@@ -73,17 +79,17 @@ describe('LinkedIn Post Extraction', () => {
   });
 
   describe('getPostId', () => {
-    it('should extract post ID from data-urn attribute', () => {
+    it('should extract post ID from componentkey attribute', () => {
       document.body.innerHTML = createMockLinkedInPost({ id: '7123456789012345678' });
-      const element = document.querySelector('.feed-shared-update-v2')!;
+      const element = document.querySelector('[data-view-name="feed-full-update"]')!;
 
       const postId = adapter.getPostId(element);
       expect(postId).toBe('7123456789012345678');
     });
 
-    it('should return null for elements without data-urn', () => {
-      document.body.innerHTML = '<div class="feed-shared-update-v2">No URN</div>';
-      const element = document.querySelector('.feed-shared-update-v2')!;
+    it('should return null for elements without componentkey', () => {
+      document.body.innerHTML = '<div data-view-name="feed-full-update">No ID</div>';
+      const element = document.querySelector('[data-view-name="feed-full-update"]')!;
 
       // This will use fallback hash since no content matches
       const postId = adapter.getPostId(element);
@@ -101,7 +107,7 @@ describe('LinkedIn Post Extraction', () => {
         content: 'Excited to share my latest project!',
         reactionCount: '100',
       });
-      const element = document.querySelector('.feed-shared-update-v2')!;
+      const element = document.querySelector('[data-view-name="feed-full-update"]')!;
 
       const post = adapter.extractPost(element);
 
@@ -118,7 +124,7 @@ describe('LinkedIn Post Extraction', () => {
         hasImage: true,
         content: 'Check out this photo!',
       });
-      const element = document.querySelector('.feed-shared-update-v2')!;
+      const element = document.querySelector('[data-view-name="feed-full-update"]')!;
 
       const post = adapter.extractPost(element);
 
@@ -131,7 +137,7 @@ describe('LinkedIn Post Extraction', () => {
         isRepost: true,
         content: 'Original content',
       });
-      const element = document.querySelector('.feed-shared-update-v2')!;
+      const element = document.querySelector('[data-view-name="feed-full-update"]')!;
 
       const post = adapter.extractPost(element);
 
@@ -144,7 +150,7 @@ describe('LinkedIn Post Extraction', () => {
         isSponsored: true,
         content: 'Buy our product!',
       });
-      const element = document.querySelector('.feed-shared-update-v2')!;
+      const element = document.querySelector('[data-view-name="feed-full-update"]')!;
 
       const post = adapter.extractPost(element);
 
@@ -153,15 +159,16 @@ describe('LinkedIn Post Extraction', () => {
 
     it('should return null for posts without content', () => {
       document.body.innerHTML = `
-        <div class="feed-shared-update-v2" data-urn="urn:li:activity:123">
-          <div class="update-components-actor">
-            <span class="update-components-actor__name">
-              <span class="visually-hidden">Test User</span>
-            </span>
-          </div>
+        <div data-view-name="feed-full-update" componentkey="expanded123FeedType_MAIN_FEED_RELEVANCE">
+          <a data-view-name="feed-actor-image" href="https://www.linkedin.com/in/testuser">
+            <figure></figure>
+          </a>
+          <a href="https://www.linkedin.com/in/testuser">
+            <div><p>Test User</p></div>
+          </a>
         </div>
       `;
-      const element = document.querySelector('.feed-shared-update-v2')!;
+      const element = document.querySelector('[data-view-name="feed-full-update"]')!;
 
       const post = adapter.extractPost(element);
 
@@ -171,7 +178,7 @@ describe('LinkedIn Post Extraction', () => {
     it('should include extractedAt timestamp', () => {
       const before = Date.now();
       document.body.innerHTML = createMockLinkedInPost({});
-      const element = document.querySelector('.feed-shared-update-v2')!;
+      const element = document.querySelector('[data-view-name="feed-full-update"]')!;
 
       const post = adapter.extractPost(element);
       const after = Date.now();
@@ -183,7 +190,7 @@ describe('LinkedIn Post Extraction', () => {
 
     it('should generate correct post URL', () => {
       document.body.innerHTML = createMockLinkedInPost({ id: '7123456789012345678' });
-      const element = document.querySelector('.feed-shared-update-v2')!;
+      const element = document.querySelector('[data-view-name="feed-full-update"]')!;
 
       const post = adapter.extractPost(element);
 

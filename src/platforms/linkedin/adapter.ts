@@ -35,7 +35,33 @@ export class LinkedInAdapter implements PlatformAdapter {
    * Get the unique ID for a post element
    */
   getPostId(element: Element): string | null {
-    // Try to get the data-urn attribute
+    // Try componentkey attribute first (new LinkedIn DOM structure)
+    const componentKey = element.getAttribute(linkedInDataAttributes.componentKey);
+    if (componentKey) {
+      const expandedMatch = componentKey.match(linkedInDataAttributes.componentKeyPattern);
+      if (expandedMatch) {
+        return expandedMatch[1];
+      }
+      // Try simple pattern for non-expanded keys
+      const simpleMatch = componentKey.match(linkedInDataAttributes.componentKeySimplePattern);
+      if (simpleMatch) {
+        return simpleMatch[1];
+      }
+    }
+
+    // Check parent/ancestor elements for componentkey
+    const parentWithKey = element.closest('[componentkey*="FeedType"]');
+    if (parentWithKey) {
+      const parentKey = parentWithKey.getAttribute('componentkey');
+      if (parentKey) {
+        const match = parentKey.match(linkedInDataAttributes.componentKeyPattern);
+        if (match) {
+          return match[1];
+        }
+      }
+    }
+
+    // Legacy: Try to get the data-urn attribute
     const urn = element.getAttribute(linkedInDataAttributes.postUrn);
     if (urn) {
       const activityMatch = urn.match(linkedInDataAttributes.activityUrnPattern);
@@ -48,7 +74,7 @@ export class LinkedInAdapter implements PlatformAdapter {
       }
     }
 
-    // Check parent elements for the URN
+    // Legacy: Check parent elements for the URN
     const parent = element.closest('[data-urn]');
     if (parent) {
       const parentUrn = parent.getAttribute('data-urn');
@@ -158,6 +184,23 @@ export class LinkedInAdapter implements PlatformAdapter {
    * Extract the author's name from a post element
    */
   private extractAuthorName(container: Element): string | undefined {
+    // New structure: look for the actor link and find the name in nearby elements
+    const actorImage = container.querySelector('[data-view-name="feed-actor-image"]');
+    if (actorImage) {
+      // The name is typically in a sibling anchor element's first paragraph
+      const nextAnchor = actorImage.nextElementSibling;
+      if (nextAnchor?.tagName === 'A') {
+        const namePara = nextAnchor.querySelector('p');
+        if (namePara) {
+          const text = namePara.textContent?.trim();
+          if (text && !text.includes('followers')) {
+            return text.replace(/\s+/g, ' ').split('\n')[0].trim();
+          }
+        }
+      }
+    }
+
+    // Try original selectors as fallback
     const selectors = this.selectors.authorName.split(',').map((s) => s.trim());
 
     for (const selector of selectors) {
@@ -178,6 +221,23 @@ export class LinkedInAdapter implements PlatformAdapter {
    * Extract the author's headline/description
    */
   private extractAuthorHeadline(container: Element): string | undefined {
+    // New structure: look for the actor link and find headline in nearby elements
+    const actorImage = container.querySelector('[data-view-name="feed-actor-image"]');
+    if (actorImage) {
+      const nextAnchor = actorImage.nextElementSibling;
+      if (nextAnchor?.tagName === 'A') {
+        const paragraphs = nextAnchor.querySelectorAll('p');
+        // Second paragraph is typically the headline/followers
+        if (paragraphs.length >= 2) {
+          const text = paragraphs[1].textContent?.trim();
+          if (text) {
+            return text.split('\n')[0].trim();
+          }
+        }
+      }
+    }
+
+    // Fallback to original selectors
     if (!this.selectors.authorHeadline) return undefined;
     const text = this.extractTextContent(container, this.selectors.authorHeadline);
     if (text) {
@@ -191,13 +251,23 @@ export class LinkedInAdapter implements PlatformAdapter {
    * Extract the author's profile URL
    */
   private extractAuthorProfileUrl(container: Element): string | undefined {
+    // New structure: look for the actor image link
+    const actorImage = container.querySelector('[data-view-name="feed-actor-image"]') as HTMLAnchorElement | null;
+    if (actorImage?.href) {
+      const href = actorImage.href;
+      if (href.includes('/in/') || href.includes('/company/')) {
+        return href.split('?')[0]; // Remove query params
+      }
+    }
+
+    // Fallback to original selectors
     if (!this.selectors.authorProfileLink) return undefined;
 
     const selectors = this.selectors.authorProfileLink.split(',').map((s) => s.trim());
 
     for (const selector of selectors) {
       const link = container.querySelector(selector) as HTMLAnchorElement | null;
-      if (link?.href && link.href.includes('/in/')) {
+      if (link?.href && (link.href.includes('/in/') || link.href.includes('/company/'))) {
         return link.href.split('?')[0]; // Remove query params
       }
     }
@@ -230,15 +300,18 @@ export class LinkedInAdapter implements PlatformAdapter {
     // Clone the element to avoid modifying the original
     const clone = element.cloneNode(true) as Element;
 
-    // Remove hidden elements
-    clone.querySelectorAll('.visually-hidden, [aria-hidden="true"]').forEach((el) => {
+    // Remove hidden elements (new structure uses class patterns for visually-hidden)
+    clone.querySelectorAll('.visually-hidden, [aria-hidden="true"], ._7e570f38').forEach((el) => {
       // Keep aria-hidden spans that contain the actual visible text
-      if (!el.closest('.update-components-text')) {
+      const parent = el.closest('[data-testid="expandable-text-box"]');
+      if (!parent) {
         el.remove();
       }
     });
 
-    // Remove "see more" buttons
+    // Remove "see more" buttons (new structure)
+    clone.querySelectorAll('[data-testid="expandable-text-button"]').forEach((el) => el.remove());
+    // Legacy "see more" buttons
     clone.querySelectorAll('.feed-shared-inline-show-more-text__see-more-less-toggle').forEach((el) => el.remove());
 
     let text = clone.textContent || '';
@@ -251,7 +324,7 @@ export class LinkedInAdapter implements PlatformAdapter {
       .trim();
 
     // Remove common LinkedIn UI text
-    text = text.replace(/\s*(see more|see less|…more)\s*/gi, '').trim();
+    text = text.replace(/\s*(see more|see less|…more|… more)\s*/gi, '').trim();
 
     return text;
   }
@@ -329,15 +402,33 @@ export class LinkedInAdapter implements PlatformAdapter {
    * Check if the post is a repost
    */
   private isRepost(container: Element): boolean {
-    if (!this.selectors.repostIndicator) return false;
-
-    const indicator = container.querySelector(this.selectors.repostIndicator);
-    if (indicator) {
-      const text = indicator.textContent?.toLowerCase() || '';
-      return text.includes('repost');
+    // New structure: check for repost header
+    const headerText = container.querySelector('[data-view-name="feed-header-text"]');
+    if (headerText) {
+      const text = headerText.textContent?.toLowerCase() || '';
+      if (text.includes('repost')) {
+        return true;
+      }
     }
 
-    // Also check for reshare URN
+    // Also check for the header actor image (indicates someone shared/reposted)
+    const headerActor = container.querySelector('[data-view-name="feed-header-actor-image"]');
+    if (headerActor) {
+      return true;
+    }
+
+    // Legacy: check repost indicator selector
+    if (this.selectors.repostIndicator) {
+      const indicator = container.querySelector(this.selectors.repostIndicator);
+      if (indicator) {
+        const text = indicator.textContent?.toLowerCase() || '';
+        if (text.includes('repost')) {
+          return true;
+        }
+      }
+    }
+
+    // Legacy: check for reshare URN
     const urn = container.getAttribute('data-urn') || '';
     return urn.includes('reshare');
   }
@@ -346,10 +437,23 @@ export class LinkedInAdapter implements PlatformAdapter {
    * Check if the post is sponsored
    */
   private isSponsored(container: Element): boolean {
+    // New structure: check for sponsored indicator
     const indicator = container.querySelector(linkedInExtraSelectors.sponsoredIndicator);
     if (indicator) return true;
 
-    // Check for "Promoted" or "Sponsored" text
+    // Check for "Promoted" or "Sponsored" text in the actor area
+    const actorImage = container.querySelector('[data-view-name="feed-actor-image"]');
+    if (actorImage) {
+      const nextAnchor = actorImage.nextElementSibling;
+      if (nextAnchor) {
+        const text = nextAnchor.textContent?.toLowerCase() || '';
+        if (text.includes('promoted') || text.includes('sponsored')) {
+          return true;
+        }
+      }
+    }
+
+    // Legacy: check for "Promoted" or "Sponsored" text
     const actorDescription = container.querySelector('.update-components-actor__sub-description');
     if (actorDescription) {
       const text = actorDescription.textContent?.toLowerCase() || '';
