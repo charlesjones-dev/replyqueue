@@ -99,9 +99,76 @@ export class LinkedInAdapter implements PlatformAdapter {
 
   /**
    * Generate the permalink URL for a post
+   * If the postId is already a numeric activity ID, use it directly
+   * Otherwise, it's a componentKey and we can't generate a valid URL
    */
   getPostUrl(postId: string): string {
+    // Check if this is a numeric activity ID
+    if (/^\d+$/.test(postId)) {
+      return `${linkedInUrlPatterns.postPermalink}urn:li:activity:${postId}`;
+    }
+    // For componentKey-based IDs, return a search URL as fallback
+    // The actual URL will be set during extraction if we find the tracking scope
     return `${linkedInUrlPatterns.postPermalink}urn:li:activity:${postId}`;
+  }
+
+  /**
+   * Extract the actual activity URN from tracking scope data
+   * LinkedIn embeds the URN in a data-view-tracking-scope attribute as encoded JSON
+   */
+  private extractActivityUrn(element: Element): string | null {
+    // Find the parent with tracking scope data
+    const trackingParent = element.closest('[data-view-tracking-scope]');
+    if (!trackingParent) {
+      // Try checking if the element itself has tracking scope
+      const parentContainer = element.parentElement?.closest('[data-view-tracking-scope]');
+      if (!parentContainer) {
+        return null;
+      }
+      return this.parseTrackingScope(parentContainer);
+    }
+    return this.parseTrackingScope(trackingParent);
+  }
+
+  /**
+   * Parse the tracking scope attribute to extract the updateUrn
+   */
+  private parseTrackingScope(element: Element): string | null {
+    const trackingScope = element.getAttribute('data-view-tracking-scope');
+    if (!trackingScope) return null;
+
+    try {
+      const parsed = JSON.parse(trackingScope);
+      if (!Array.isArray(parsed) || parsed.length === 0) return null;
+
+      // Look for FeedUpdateServedEvent which contains the post URN
+      for (const item of parsed) {
+        if (item.breadcrumb?.content?.data) {
+          // The data is an array of byte values that form a JSON string
+          const bytes = item.breadcrumb.content.data;
+          if (Array.isArray(bytes)) {
+            const jsonString = bytes.map((b: number) => String.fromCharCode(b)).join('');
+            try {
+              const contentData = JSON.parse(jsonString);
+              if (contentData.updateUrn) {
+                // Extract the activity ID from "urn:li:activity:1234567890"
+                const match = contentData.updateUrn.match(/urn:li:activity:(\d+)/);
+                if (match) {
+                  return match[1];
+                }
+              }
+            } catch {
+              // JSON parse failed for content data
+              continue;
+            }
+          }
+        }
+      }
+    } catch {
+      // JSON parse failed for tracking scope
+      console.debug(LOG_PREFIX, 'Failed to parse tracking scope');
+    }
+    return null;
   }
 
   /**
@@ -111,33 +178,37 @@ export class LinkedInAdapter implements PlatformAdapter {
     try {
       const postId = this.getPostId(element);
       if (!postId) {
-        console.debug(`${LOG_PREFIX} Could not extract post ID from element`);
+        console.debug(LOG_PREFIX, 'Could not extract post ID from element');
         return null;
       }
 
       // Check if this is a sponsored post and skip it
       if (this.isSponsored(element)) {
-        console.debug(`${LOG_PREFIX} Skipping sponsored post: ${postId}`);
+        console.debug(LOG_PREFIX, 'Skipping sponsored post:', postId);
         return null;
       }
 
       const authorName = this.extractAuthorName(element);
       if (!authorName) {
-        console.debug(`${LOG_PREFIX} Could not extract author name for post: ${postId}`);
+        console.debug(LOG_PREFIX, 'Could not extract author name for post:', postId);
         return null;
       }
 
       const content = this.extractPostContent(element);
       if (!content) {
-        console.debug(`${LOG_PREFIX} Could not extract content for post: ${postId}`);
+        console.debug(LOG_PREFIX, 'Could not extract content for post:', postId);
         return null;
       }
 
       const isRepost = this.isRepost(element);
 
+      // Try to extract the actual activity URN for proper URL generation
+      const activityUrn = this.extractActivityUrn(element);
+      const postUrl = activityUrn ? this.getPostUrl(activityUrn) : this.getPostUrl(postId);
+
       const post: ExtractedPost = {
         id: postId,
-        url: this.getPostUrl(postId),
+        url: postUrl,
         authorName,
         authorHeadline: this.extractAuthorHeadline(element),
         authorProfileUrl: this.extractAuthorProfileUrl(element),
@@ -153,10 +224,10 @@ export class LinkedInAdapter implements PlatformAdapter {
         extractedAt: Date.now(),
       };
 
-      console.debug(`${LOG_PREFIX} Extracted post:`, post.id, post.authorName);
+      console.debug(LOG_PREFIX, 'Extracted post:', post.id, post.authorName);
       return post;
     } catch (error) {
-      console.error(`${LOG_PREFIX} Error extracting post:`, error);
+      console.error(LOG_PREFIX, 'Error extracting post:', error);
       return null;
     }
   }

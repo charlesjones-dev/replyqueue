@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-02-04
+
+### Fixed
+
+- Fixed "View" button generating invalid LinkedIn URLs (was using componentkey IDs instead of activity URNs)
+- Post URLs now correctly extracted from LinkedIn's tracking scope data for proper deep linking
+
 ## [1.1.2] - 2026-02-04
 
 ### Fixed
@@ -68,7 +75,8 @@ Initial release of ReplyQueue, a Chrome extension that helps content creators fi
 - Reply suggestion generation with customizable writing style
 - Side panel UI with post cards, filtering, and settings
 
-[Unreleased]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/charlesjones-dev/replyqueue/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/charlesjones-dev/replyqueue/compare/v1.0.0...v1.1.0
