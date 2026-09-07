@@ -1,15 +1,18 @@
 # ReplyQueue
 
-[![Chrome Web Store](https://img.shields.io/badge/Chrome-Install-4285F4?logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/replyqueue/lkdecdgjijicaehjngnehdhoahjipnpg)
+> **Retired — September 2026**
+> ReplyQueue is no longer maintained. No further features, bug fixes, or security updates are planned.
+> The extension has been unpublished from the Chrome Web Store. Its code and dependencies are outdated,
+> and compatibility with LinkedIn is not guaranteed. Source code remains available under the MIT license
+> for reference and independent forks. The documentation below is retained for historical reference.
+
 [![Vue 3](https://img.shields.io/badge/Vue-3.4-4FC08D?logo=vue.js)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
 [![Chrome MV3](https://img.shields.io/badge/Chrome-Manifest%20V3-4285F4?logo=googlechrome)](https://developer.chrome.com/docs/extensions/mv3/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-**Stop scrolling past engagement opportunities.** ReplyQueue watches your LinkedIn feed and surfaces posts that align with your blog content, so you can join conversations that matter.
-
-**[Install from Chrome Web Store →](https://chromewebstore.google.com/detail/replyqueue/lkdecdgjijicaehjngnehdhoahjipnpg)**
+ReplyQueue was a Chrome extension that matched LinkedIn posts against your blog content and generated AI-powered reply suggestions.
 
 ## Why ReplyQueue?
 
@@ -23,18 +26,9 @@ Content creators spend hours scrolling social feeds hoping to find relevant disc
 - **Privacy-First** - No analytics, no tracking, your data stays local
 - **Extensible** - Platform adapter pattern makes adding new networks straightforward
 
-## Installation
+## Building from Source (Historical)
 
-### From Chrome Web Store (Recommended)
-
-**[Install ReplyQueue →](https://chromewebstore.google.com/detail/replyqueue/lkdecdgjijicaehjngnehdhoahjipnpg)**
-
-After installation:
-1. Click the puzzle piece icon in Chrome toolbar
-2. Pin ReplyQueue for easy access
-3. Click the ReplyQueue icon to open the side panel and start setup
-
-### From Source (Development)
+These instructions are preserved for reference and independent forks. Builds and runtime behavior are no longer maintained or verified against current dependencies, Chrome, or LinkedIn.
 
 1. **Clone the repository**
    ```bash
@@ -304,7 +298,9 @@ docker run --rm -v "$(pwd):/src" semgrep/semgrep semgrep scan --config auto --co
 
 ---
 
-## Roadmap
+## Historical Roadmap
+
+These plans were not completed before retirement. No further development is planned for this repository.
 
 ### Planned Platforms
 - [ ] Twitter/X
@@ -324,11 +320,7 @@ docker run --rm -v "$(pwd):/src" semgrep/semgrep semgrep scan --config auto --co
 
 ## Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on:
-- Setting up the development environment
-- Code style and linting
-- Submitting issues and pull requests
-- Adding new platform adapters
+This project is retired and no longer accepts issues or pull requests. Independent forks are welcome under the MIT license. [CONTRIBUTING.md](./CONTRIBUTING.md) preserves the development guidelines for anyone continuing work in a fork.
 
 ---
 
