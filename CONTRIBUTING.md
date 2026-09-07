@@ -1,6 +1,11 @@
 # Contributing to ReplyQueue
 
-Thank you for your interest in contributing to ReplyQueue! This document provides guidelines for contributing to the project.
+> **Retired — September 2026**
+> ReplyQueue is no longer maintained and no longer accepts issues or pull requests.
+> No further features, bug fixes, or security updates are planned. The extension has been unpublished
+> from the Chrome Web Store. Independent forks are welcome under the MIT license.
+
+These development guidelines are retained for historical reference and independent forks. Issue reporting and pull request instructions below apply only to forks whose maintainers choose to accept contributions.
 
 ## Table of Contents
 
@@ -485,12 +490,6 @@ Before submitting a PR:
 
 ---
 
-## Questions?
+## Support
 
-If you have questions about contributing:
-
-1. Check existing issues and discussions
-2. Open a new issue with the "question" label
-3. Reach out via the contact info in README
-
-Thank you for contributing to ReplyQueue!
+Support is no longer provided for this repository. Existing documentation and closed issues remain available for reference. If you use an independent fork, follow that fork's support and contribution guidelines.
